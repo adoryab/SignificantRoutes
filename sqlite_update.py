@@ -9,9 +9,10 @@
 # 3. make code less specific to this particular database
 # 4. set this up to work with command line
 # 5. verify that path to database is valid (sqlite3 doesn't check)
+# 6. time calls to avoid exceeding Google's query limit
 
-API_Key = None
-# API_Key = "AIzaSyCN84vI7drlWNjVwPM-pNLZnV5HW0OAEVc"
+# API_Key = None
+API_Key = "AIzaSyC5zX6sgUM1PUgiP4R1ROdlMtigYmdpprU"
 # unnecessary for these particular calls, just used for monitoring
 # 5 calls/second and 25,000 calls/day on this key
 
@@ -76,7 +77,8 @@ def update(database="locations.db", table="locations",
                 c.execute("UPDATE {tn} SET {cn}=('{value}') WHERE {idc}=({ID})".\
                                 format(tn=table, cn=item, value=result[item], idc=id_col, 
                                        ID=id_num))
-    con.commit()
+        con.commit()
+        print "Committed!"
     con.close()
 
 update()
