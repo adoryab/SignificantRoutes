@@ -50,7 +50,7 @@ def parseLocationData(jsonObject):
 def update(database="locations.db", table="locations", 
            columns=["street_number", "street" "locality", "neighborhood", "city", 
                     "county", "state", "country", "postal_code"], id_col="_id",
-                    startIndex = 0):
+                    startIndex = 0, endIndex = None):
     con = sqlite3.connect(database)
     cursor = con.cursor()
     c = con.cursor() # secondary cursor
@@ -63,7 +63,7 @@ def update(database="locations.db", table="locations",
     cursor.execute("SELECT * FROM {tn} WHERE {idc} >= {min}"\
          .format(tn=table, idc = id_col, min = startIndex))
     fetch = cursor.fetchone()
-    while fetch is not None:
+    while fetch is not None and (endIndex is None or id_num <= endIndex):
         id_num = fetch[0]
         print "current ID", id_num
     	latitude = fetch[3] # @TODO: modify so that these lines aren't specific
