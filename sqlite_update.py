@@ -9,16 +9,20 @@
 # 3. make code less specific to this particular database
 # 4. set this up to work with command line
 # 5. verify that path to database is valid (sqlite3 doesn't check)
-# 6. time calls to avoid exceeding Google's query limit
+# 6. time calls to avoid exceeding Google's query limit (5/sec)
+# 7. style (eliminate magic numbers and such)
+# 8. set up multithreading
+# 9. memory mapping?
 
-# API_Key = None
-API_Key = "AIzaSyC5zX6sgUM1PUgiP4R1ROdlMtigYmdpprU"
+API_Key = "AIzaSyAuAWiaukaws8JUwaLkiivaCz3P7X5e498"
+# API_Key = "AIzaSyB3ffCdODdeKP8zz1CvO40QRqpDB5UzHiA"
 # unnecessary for these particular calls, just used for monitoring
 # 5 calls/second and 25,000 calls/day on this key
 
 URL = "https://maps.googleapis.com/maps/api/geocode/json"
 
 import requests
+import time
 import sqlite3
 
 def getLocationData(latitude, longitude):
@@ -49,36 +53,49 @@ def parseLocationData(jsonObject):
     return result
 
 def update(database="locations.db", table="locations", 
-           columns=["street_number", "street" "locality", "neighborhood", "city", 
+           columns=["street_number", "street", "locality", "neighborhood", "city", 
                     "county", "state", "country", "postal_code"], id_col="_id",
-                    startIndex = 0, endIndex = None):
+                    startIndex = 6676, endIndex = None):
     con = sqlite3.connect(database)
-    cursor = con.cursor()
-    c = con.cursor() # secondary cursor
-    c.execute("PRAGMA table_info({tn})".format(tn=table))
-    existingCols = [item[1] for item in c.fetchall()]
-    columns = [item for item in columns if item not in existingCols]
-    for col in columns:
-      cursor.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' TEXT"\
-         .format(tn=table, cn=col))
-    cursor.execute("SELECT * FROM {tn} WHERE {idc} >= {min}"\
-         .format(tn=table, idc = id_col, min = startIndex))
-    fetch = cursor.fetchone()
-    while fetch is not None and (endIndex is None or id_num <= endIndex):
-        id_num = fetch[0]
-        print "current ID", id_num
-    	latitude = fetch[3] # @TODO: modify so that these lines aren't specific
-    	longitude = fetch[4] # to just this database
-    	jsonObject = getLocationData(latitude, longitude)
-    	result = parseLocationData(jsonObject)
+    with con:
+        cursor = con.cursor()
+        c = con.cursor() # secondary cursor
+        c.execute("PRAGMA table_info({tn})".format(tn=table))
+        existingCols = [item[1] for item in c.fetchall()]
+        newColumns = [item for item in columns if item not in existingCols]
+        for col in newColumns:
+          cursor.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' TEXT"\
+             .format(tn=table, cn=col))
+        cursor.execute("SELECT * FROM {tn} WHERE {idc} >= {min}"\
+             .format(tn=table, idc = id_col, min = startIndex))
         fetch = cursor.fetchone()
-        for item in result:
-            if item in columns:
-                c.execute("UPDATE {tn} SET {cn}=('{value}') WHERE {idc}=({ID})".\
-                                format(tn=table, cn=item, value=result[item], idc=id_col, 
-                                       ID=id_num))
+        id_num = startIndex - 1
+        while fetch is not None and (endIndex is None or id_num < endIndex):
+            id_num = fetch[0]
+            print "current ID", id_num
+            latitude = fetch[3] # @TODO: modify so that these lines aren't specific
+            longitude = fetch[4] # to just this database
+            jsonObject = getLocationData(latitude, longitude)
+            result = parseLocationData(jsonObject)
+            if (result == dict()): break
+            fetch = cursor.fetchone()
+            for item in result:
+                if item in columns:
+                    with con:
+                        cur = con.cursor()
+                        cur.execute("UPDATE {tn} SET {cn}=('{value}') WHERE {idc}=({ID})"\
+                            .format(tn=table, cn=item, value=result[item], 
+                                               idc=id_col, ID=id_num))
         con.commit()
-        print "Committed!"
     con.close()
+
+def check(index, database="locations.db", table="locations", id_col = "_id"):
+    con = sqlite3.connect(database)
+    with con:
+        cursor = con.cursor()
+        cursor.execute("SELECT * FROM {tn} WHERE {idc} = {i}"\
+            .format(tn=table, idc=id_col, i=index))
+        fetch = cursor.fetchone()
+    return fetch
 
 update()
