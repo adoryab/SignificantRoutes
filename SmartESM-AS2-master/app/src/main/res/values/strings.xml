@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">SmartESM</string>
+    <string name="help_title">More information about SmartESM</string>
+    <string name="definition">Definition</string>
+    <string name="consume">Consume Info</string>
+    <string name="create">Create Info</string>
+    <string name="planning">Planning</string>
+    <string name="mixture">Mixture</string>
+    <string name="consume_defn">Browsing, Playing music etc.</string>
+    <string name="create_defn">Messaging, Writing emails etc.</string>
+    <string name="planning_defn">Calendar etc.</string>
+    <string name="mixture_defn">More than one of above</string>
+    <string name="definitions">DEFINITIONS</string>
+    <string name="task">Task</string>
+    <string name="activity">Activity</string>
+    <string name="task_defn"> Task helps us understand how the usage of your phone is linked 
+        to the activities you perform</string>
+    <string name="activity_defn">Activity tells us the big picture and is one of the bricks 
+        forming the routine</string>
+    <string name="example">Ex: If you are planning a trip on your mobile while in class, here, </string>
+    <string name="example_activity">Activity: Being in the class / Studying</string>
+    <string name="example_task">Task: Planning the trip</string>
+    <string name="ok">OK</string>
+    <string name="okText">Click OK to proceed</string>
+    <string name="dev_button">Developer Button</string>
+    <string name="cancelButton">Cancel</string>
+    <string name="submitButton">Submit</string>
+    <string name="helpButton">Help</string>
+    <string name="esmQuestion">Would you like to answer a couple of\nquestions about your current activity?</string>
+    <string name="nowButton">Answer Now</string>
+    <string name="laterButton">Answer Later</string>
+    <string name="busyButton">Busy</string>
+    <string name="title_activity_task_choice">TaskChoice</string>
+    <string name="title_activity_activity_choice">ActivityChoice</string>
+    <string name="inputHint">Answer here</string>
+    <string name="consentTitle">Consent Form for Participation in Research</string>
+    <string name="studyName">Study Title: Understanding Behavior of Android Users</string>
+    <string name="investigator">Principal Investigator:\nJulian Ramos\nHuman-Computer 
+        Interaction Institute, School of Computer Science,\nCarnegie Mellon University\n5000 
+        Forbes Ave\nPittsburgh, PA, 15213.\nPhone: 412.708.8874 \nEmail: ingenia@andrew.cmu.edu\n</string>
+    <string name="advisor">Faculty Advisors: Prof. Anind K. Dey\n</string>
+    <string name="coInvestigator">Co-investigators: Maitreyee S. Palkar\n</string>
+    <string name="purposeTitle">Purpose of this Study</string>
+    <string name="purposeContent">You are being asked to volunteer for a research project 
+        studying your behavior when using mobile devices. The study will explore how people
+        on their mobile devices (e.g. smartphones) go through their everyday activities. 
+        Based on the finding of the study we will propose and implement designs which will 
+        enable faster and easier use of applications on future mobile devices.\n</string>
+    <string name="procedureTitle">Procedures</string>
+    <string name="procedureContent">In order to study your daily mobile device use, we will 
+        ask you to install an application that will monitor your device use on your mobile 
+        device. Upon installation, the application will ask you to accept this consent form 
+        in order to take part in the study. You will be able to use the application only if 
+        you give your consent. The application will collect information about other 
+        applications that you install, invoke, and use on the device. In addition, the 
+        application will unobtrusively collect other contextual information that will help 
+        us understand the context in which you interact with your device: current time, cell 
+        tower IDs, WiFi access point information, location information, screen status, 
+        battery status, network status, and call and SMS events. The locations information 
+        will also used for the purpose of activity recognition. The application will store 
+        this information on your device and transmit this information to one of our servers 
+        over secure connection. The application will also ask you some questions that will 
+        pop-up based on some triggers. Your answers to these questions will also be stored 
+        on the device and transmitted with the other data.\n\nThe study will last 4 weeks. 
+        After 2 weeks, there will be a slight change in the application but the data 
+        collected will be the same.\n</string>
+    <string name="requirementsTitle">Participant Requirements</string>
+    <string name="requirementsContent">You must be 18 years old or older, and own and use an 
+        Android mobile device on regular basis.\n</string>
+    <string name="risksTitle">Risks</string>
+    <string name="risksContent">The risks and discomfort associated with participation in 
+        this study are no greater than those ordinarily encountered in daily life when 
+        using a mobile device (e.g., a cell phone). The only additional discomfort would be 
+        that you would have to answer the questions. The only risk is associated with privacy 
+        of the data collected. Confidentiality section below describes how this risk is 
+        managed.\n</string>
+    <string name="benefitsTitle">Benefits</string>
+    <string name="benefitsContent">There may be no personal benefit from your participation 
+        in the study but the knowledge received may be of value to humanity.\n</string>
+    <string name="costsTitle">Compensation And Costs</string>
+    <string name="costsContent">You will receive $40 for your participation in the study. You 
+        will not receive any additional compensation for your participation in the study.\n</string>
+    <string name="confidentiality">Confidentiality</string>
+    <string name="privacyNotice">By participating in the study, you understand and agree 
+        that Carnegie Mellon may be required to disclose your consent form, data and other 
+        personally identifiable information as required by law, regulation, subpoena or 
+        court order.  Otherwise, your confidentiality will be maintained in the following 
+        manner:\n\nYour data and consent form will be kept separate. Your consent form will 
+        be stored in a locked location on Carnegie Mellon property and will not be disclosed 
+        to third parties. By participating, you understand and agree that the data and 
+        information gathered during this study may be used by Carnegie Mellon and published 
+        and/or disclosed by Carnegie Mellon to others outside of Carnegie Mellon.  However, 
+        your name, address, contact information and other direct personal identifiers in 
+        your consent form will not be mentioned in any such publication or dissemination of 
+        the research data and/or results by Carnegie Mellon.\n\nThe researchers will take 
+        the following steps to protect participants’ identities during this study: (1) Each 
+        participant will be assigned a number; (2) The researchers will record any data 
+        collected during the study by number, not by name; (3) Any original recordings or 
+        data files will be stored in a secured and password protected location accessed only 
+        by authorized researchers.\n</string>
+    <string name="rightsTitle">Rights</string>
+    <string name="rightsContent">Your participation is voluntary. You are free to stop 
+        your participation at any point. Refusal to participate or withdrawal of your 
+        consent or discontinued participation in the study will not result in any penalty or 
+        loss of benefits or rights to which you might otherwise be entitled. The Principal 
+        Investigator may at his/her discretion remove you from the study for any of a number 
+        of reasons. In such an event, you will not suffer any penalty or loss of benefits 
+        or rights which you might otherwise be entitled.\n</string>
+    <string name="rightToInfo">Right to Ask Questions And Contact Information</string>
+    <string name="infoContent">If you have any questions about this study, you should feel 
+        free to ask them now. If you have questions later, desire additional information, 
+        or wish to withdraw your participation please contact the Principle Investigator by 
+        mail, phone or e-mail in accordance with the contact information listed on the first 
+        page of this consent.\n\nIf you have questions pertaining to your rights as a 
+        research participant; or to report objections to this study, you should contact the 
+        Research Regulatory Compliance Office at Carnegie Mellon University. Email: 
+        irb-review@andrew.cmu.edu . Phone: 412-268-1901 or 412-268-5460.\n</string>
+    <string name="consent">Voluntary Consent</string>
+    <string name="consentStatement">By accepting below, you agree that the above information 
+        has been explained to you and all your current questions have been answered. You 
+        understand that you may ask questions about any aspect of this research study during 
+        the course of the study and in the future. By clicking accept below, you agree to 
+        participate in this research study.\n</string>
+    <string name="accept">Accept</string>
+    <string name="decline">Decline</string>
+</resources>

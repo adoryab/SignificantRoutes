@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.aware.plugin.data_collection"
+    android:versionCode="1"
+    android:versionName="1.0" >
+
+    <uses-sdk
+        android:minSdkVersion="12"
+        android:targetSdkVersion="19" />
+
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="com.aware.READ_CONTEXT_DATA" />
+    <uses-permission android:name="com.aware.WRITE_CONTEXT_DATA" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_UPDATES" />
+    <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION"/>
+    
+    <application
+        android:allowBackup="true"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name" >
+        <meta-data android:name="com.google.android.gms.version"
+           android:value="@integer/google_play_services_version" />
+
+        <activity
+            android:name="com.aware.plugin.data_collection.HelpScreen"
+            android:label="@string/app_name" >
+        </activity>
+        <activity
+            android:name="com.aware.plugin.data_collection.PreScreen"
+            android:label="@string/app_name"
+            android:theme="@android:style/Theme.Dialog"
+            android:excludeFromRecents="true" >
+        </activity>
+        <activity
+            android:name="com.aware.plugin.data_collection.Settings"
+            android:exported="true"
+            android:label="@string/app_name" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name="com.aware.plugin.data_collection.Plugin"
+            android:exported="true" >
+        </service>
+        
+        <service
+            android:name="com.aware.plugin.data_collection.ActivityRecognitionService"
+            android:label="@string/app_name"
+            android:exported="false" >
+        </service>
+        
+        <service
+            android:name="com.aware.plugin.data_collection.ActivityRecognitionDecision"
+            android:exported="false" >
+        </service>
+
+
+        <provider
+            android:name="com.aware.plugin.data_collection.DataCollection_Provider"
+            android:authorities="com.aware.provider.plugin.data_collection"
+            android:exported="true"
+            android:readPermission="com.aware.READ_CONTEXT_DATA"
+            android:writePermission="com.aware.WRITE_CONTEXT_DATA" >
+        </provider>
+
+        <activity
+            android:name="com.aware.plugin.data_collection.TaskChoice"
+            android:label="@string/title_activity_task_choice"
+            android:theme="@android:style/Theme.Dialog"
+            android:excludeFromRecents="true" >
+        </activity>
+        <activity
+            android:name="com.aware.plugin.data_collection.ActivityChoice"
+            android:label="@string/title_activity_activity_choice"
+            android:theme="@android:style/Theme.Dialog"
+            android:excludeFromRecents="true" >
+        </activity>
+        <activity
+            android:name="com.aware.plugin.data_collection.UserInput"
+            android:label="@string/app_name"
+            android:theme="@android:style/Theme.Dialog"
+            android:excludeFromRecents="true" >
+        </activity>
+        <activity
+            android:name="com.aware.plugin.data_collection.ActivityRecognitionSetup"
+            android:label="@string/app_name"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:excludeFromRecents="true" >
+        </activity>
+        <activity
+            android:name="com.aware.plugin.data_collection.ServerSync"
+            android:label="@string/app_name"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:excludeFromRecents="true" >
+        </activity>
+        <activity
+            android:name="com.aware.plugin.data_collection.EntropyUpdater"
+            android:label="@string/app_name"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:excludeFromRecents="true" >
+        </activity>
+
+        <!-- AWARE Service we need to override -->
+        <service
+            android:name="com.aware.Applications"
+            android:exported="true"
+            android:enabled="true"
+            tools:replace="android:enabled"
+            ></service>
+
+    </application>
+
+</manifest>
