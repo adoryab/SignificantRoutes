@@ -13,7 +13,9 @@
 # 7. style (eliminate magic numbers and such)
 # 8. set up multithreading
 # 9. memory mapping?
+# 10. add named places and intersections
 
+# API_Key = "AIzaSyCN84vI7drlWNjVwPM-pNLZnV5HW0OAEVc"
 API_Key = "AIzaSyAuAWiaukaws8JUwaLkiivaCz3P7X5e498"
 # API_Key = "AIzaSyB3ffCdODdeKP8zz1CvO40QRqpDB5UzHiA"
 # unnecessary for these particular calls, just used for monitoring
@@ -28,6 +30,7 @@ import sqlite3
 def getLocationData(latitude, longitude):
     parameters = dict()
     parameters['latlng'] = str(latitude) + "," + str(longitude)
+    parameters['result_type'] = "intersection|colloquial_area|sublocality|premise|natural_feature|airport|park|point_of_interest"
     if API_Key != None: parameters['key'] = API_Key
     r = requests.get(url=URL, params=parameters)
     return r.json()
@@ -49,13 +52,17 @@ def parseLocationData(jsonObject):
                 elif (locType == "political"): locType = "city"
                 # @TODO: rewrite previous few lines
                 result[locType] = name
+    if jsonObject['status'] == "ZERO_RESULTS":
+        result = None
     print "status: ", jsonObject['status']
     return result
 
 def update(database="locations.db", table="locations", 
            columns=["street_number", "street", "locality", "neighborhood", "city", 
-                    "county", "state", "country", "postal_code"], id_col="_id",
-                    startIndex = 6676, endIndex = None):
+                    "county", "state", "country", "postal_code", "intersection",
+                    "premise", "colloquial_area", "sublocality", "airport", "park",
+                    "natural_feature", "point_of_interest"], id_col="_id",
+                    startIndex = 0, endIndex = None):
     con = sqlite3.connect(database)
     with con:
         cursor = con.cursor()
@@ -77,8 +84,11 @@ def update(database="locations.db", table="locations",
             longitude = fetch[4] # to just this database
             jsonObject = getLocationData(latitude, longitude)
             result = parseLocationData(jsonObject)
-            if (result == dict()): break
             fetch = cursor.fetchone()
+            if (result == None): 
+                print "Didn't get no data"
+                continue
+            if (result == dict()): break
             for item in result:
                 if item in columns:
                     with con:
