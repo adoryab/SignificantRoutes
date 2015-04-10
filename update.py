@@ -205,7 +205,12 @@ googleKeys = ["AIzaSyAp4w8LLCVozx5X9SrJ3PiflwCng1ik1Y8",
               "AIzaSyC6oyobPYiUlnDNsnJrMTMZ-2kB8P_t6VA",
               "AIzaSyD52DsLAJFLRXFkIv_LRJtdOK7_ESjYKDM",
               "AIzaSyC6A-dlO1A-tobttQINQqBlLf7yA-fKhHU",
-              "AIzaSyDWwG3t6J174Db1rNy1HMTNYK0I7qjphGM"]
+              "AIzaSyDWwG3t6J174Db1rNy1HMTNYK0I7qjphGM",
+              "AIzaSyACCLSff26AZD3XCs2DFx3bse_ozmMScPo",
+              "AIzaSyCODgpWYCzNUIkzID1TyPXIa91kNa8LU_I",
+              "AIzaSyCF6oPByEx4NQyNF9lKZ-jpYj3SC5waOfo",
+              "AIzaSyArhKRF62AP0Ggwhq0JRgJlJS5UwAeYolA",
+              "AIzaSyDICubFC6OVgraLNVWjuQI_kn6wz1IdxjE"]
 gKeyIndex = 0
 googleKey = googleKeys[gKeyIndex]
 
@@ -227,7 +232,20 @@ if len(args) == 1:
                                      maxIndex=maxInd)
             except:
                 gKeyIndex += 1
-                if gKeyIndex >= (2 * len(googleKeys)): stat = True
+                if gKeyIndex >= (10 * len(googleKeys)): stat = True
+                googleKey = googleKeys[(gKeyIndex%(len(googleKeys)))]
+    for ind in xrange(800):
+        stat = False
+        minInd = ind * 10
+        maxInd = minInd + 9
+        while (stat != True):
+            try:
+                stat = hackyUpdate(service="Google Geocoding", 
+                                     key=googleKey, minIndex=minInd, 
+                                     maxIndex=maxInd)
+            except:
+                gKeyIndex += 1
+                if gKeyIndex >= (10 * len(googleKeys)): stat = True
                 googleKey = googleKeys[(gKeyIndex%(len(googleKeys)))]
     for ind in xrange(800):
         stat = False
@@ -240,7 +258,7 @@ if len(args) == 1:
                                      maxIndex=maxInd)
             except:
                 gnKeyIndex += 1
-                if gnKeyIndex >= (2 * len(gNamesKeys)): stat = True
+                if gnKeyIndex >= (10 * len(gNamesKeys)): stat = True
                 gNamesKey = gNamesKeys[(gnKeyIndex%(len(gNamesKeys)))]
 
 else:
