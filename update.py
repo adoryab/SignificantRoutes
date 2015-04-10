@@ -3,11 +3,21 @@
 # handles API calls and reverse geocoding
 # currently set up to work with SQLite databases
 
+##### COMMAND LINE USAGE #####
+
+# SYNTAX: "python update.py [service to use] [parameter] [value]"
+
+# [service to use] = "Google Geocoding" or "GeoNames" or "Google Places"
+# [parameter] = "minIndex" or "maxIndex" or "key"
+
 import requests
 import sqlite3
 import sys
 
 class StatusException(Exception):
+    pass
+
+class InputException(Exception):
     pass
 
 def updateRow(data, **information):
@@ -27,7 +37,7 @@ def updateRow(data, **information):
     del data[id_col]
     for item in data:
         if (type(data[item]) == str and "'" in data[item]): 
-        	data[item] = (data[item]).replace("'", "")
+            data[item] = (data[item]).replace("'", "")
         cursor.execute("UPDATE {tn} SET {cn} = ('{value}') WHERE {idc} = ({ID})"\
                        .format(tn=table, cn=item, value=data[item], 
                                   idc=id_col, ID=ID))
@@ -48,6 +58,7 @@ def getData(URL, item, key):
         translator['route'] = "street"
         translator['political'] = "city"
         parameters['latlng'] = str(item[3]) + "," + str(item[4])
+        parameters['key'] = key
         JSONObject = getJSON(URL, parameters)
         if JSONObject['status'] != "OK":
             raise StatusException(JSONObject['status'])
@@ -151,32 +162,63 @@ def createTable(database, table, original):
     con.close()
 
 def update(type, database="locations.db", table="locations", 
-           minIndex=0, maxIndex=None):
+           minIndex=0, maxIndex=None, key=None):
     if type == "Google Geocoding":
         newTable = "geocoding"
-        key = "AIzaSyB3ffCdODdeKP8zz1CvO40QRqpDB5UzHiA"
+        if key == None:
+            key = "AIzaSyB3ffCdODdeKP8zz1CvO40QRqpDB5UzHiA"
         URL = "https://maps.googleapis.com/maps/api/geocode/json"
         createTable(database, newTable, table)
         updateTable(key=key, URL=URL, table=newTable,
                     minIndex=minIndex, maxIndex=maxIndex)
     elif type == "Google Places":
-        key = "AIzaSyCN84vI7drlWNjVwPM-pNLZnV5HW0OAEVc"
-        URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?"
         newTable = "places"
+        if key == None:
+            key = "AIzaSyCN84vI7drlWNjVwPM-pNLZnV5HW0OAEVc"
+        URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?"
         createTable(database, newTable, table)
         updateTable(key=key, URL=URL, table=newTable,
                     minIndex=minIndex, maxIndex=maxIndex)
     elif type == "GeoNames":
-        key = "sqlite1"
+        newTable = "GeoNames"
+        if key == None:
+            key = "sqlite1"
         URL_intersections = "http://api.geonames.org/findNearestIntersectionJSON?"
         URL_places = "http://api.geonames.org/findNearbyPlaceNameJSON?"
-        newTable = "GeoNames"
         createTable(database, newTable, table)
         updateTable(key=key, URL=URL_intersections, table=newTable,
                     minIndex=minIndex, maxIndex=maxIndex)
         updateTable(key=key, URL=URL_places, table=newTable,
                     minIndex=minIndex, maxIndex=maxIndex)
 
-update("Google Geocoding", minIndex=0, maxIndex=None)
-update("Google Places", minIndex=0, maxIndex=None)
-update("GeoNames", minIndex=0, maxIndex=None)
+args = sys.argv
+if len(args) > 0 and args[1] == "Google":
+    args[1] = args[1] + " " + args[2]
+    length = len(args)
+    for i in xrange(2, (length-1)):
+        args[i] = args[i+1]
+    args = args[:-1]
+
+arg = dict()
+arg['service'] = args[1]
+arg['minIndex'] = 0
+arg['maxIndex'] = None
+arg['key'] = None
+
+if "minIndex" in args and args.index("minIndex") != (len(args) - 1):
+    try:
+        arg['minIndex'] = int(args[args.index("minIndex")+1])
+    except: raise InputException("minIndex must be an int!")
+
+if "maxIndex" in args and args.index("maxIndex") != (len(args) - 1):
+    try:
+        arg['maxIndex'] = int(args[args.index("maxIndex")+1])
+    except: raise InputException("maxIndex must be an int!")
+
+if "key" in args and args.index("key") != (len(args) - 1):
+    try:
+        arg['key'] = str(args[args.index("key")+1])
+    except: raise InputException("key must be a string!")
+
+update(type=arg['service'], minIndex=arg['minIndex'],
+       maxIndex=arg['maxIndex'], key=arg['key'])
