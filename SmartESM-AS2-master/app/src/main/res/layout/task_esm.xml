@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal" >
+
+        <RadioGroup
+            android:id="@+id/taskRadio"
+            android:layout_width="0dip"
+            android:layout_height="242dp"
+            android:layout_weight="0.36" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" >
+
+            <Button
+                android:id="@+id/consumeHelp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/helpButton" />
+
+            <Button
+                android:id="@+id/createHelp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/helpButton" />
+
+            <Button
+                android:id="@+id/planningHelp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/helpButton" />
+
+            <Button
+                android:id="@+id/mixtureHelp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/helpButton" />
+
+            <Button
+                android:id="@+id/nothingHelp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/helpButton" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+
+        <Button
+            android:id="@+id/cancelButton"
+            android:layout_width="94dp"
+            android:layout_height="wrap_content"
+            android:text="@string/cancelButton" />
+
+        <Button
+            android:id="@+id/submitButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/submitButton" />
+
+    </LinearLayout>
+
+</LinearLayout>
