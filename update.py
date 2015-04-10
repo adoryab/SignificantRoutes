@@ -200,6 +200,27 @@ def hackyUpdate(service, database="locations.db", table="locations",
            maxIndex=maxIndex, key=key)
     return True
 
+def runUpdate(service, keySet, minIndex=0, maxIndex=8000, 
+              chunkSize=10, attempts=10):
+    # LIMITATION: maxIndex must be an int!
+    keyIndex = 0
+    key = keySet[keyIndex%(len(keySet))]
+    for ind in xrange(minIndex, (maxIndex/chunkSize)+1):
+        status = False
+        minInd = ind * chunkSize
+        maxInd = minInd + (chunkSize - 1)
+        while (status != True):
+            try:
+                status = hackyUpdate(service=service, 
+                                     key=key, minIndex=minInd, 
+                                     maxIndex=maxInd)
+            except:
+                keyIndex += 1
+                if keyIndex >= (attempts * len(keySet)): 
+                    raise StatusException("All keys failed!")
+                key = keySet[(keyIndex%(len(keySet)))]
+
+
 googleKeys = ["AIzaSyAp4w8LLCVozx5X9SrJ3PiflwCng1ik1Y8",
               "AIzaSyB6gqWstIJN6WipZRAyzPVO5umSD3j4tWY",
               "AIzaSyC6oyobPYiUlnDNsnJrMTMZ-2kB8P_t6VA",
@@ -211,55 +232,15 @@ googleKeys = ["AIzaSyAp4w8LLCVozx5X9SrJ3PiflwCng1ik1Y8",
               "AIzaSyCF6oPByEx4NQyNF9lKZ-jpYj3SC5waOfo",
               "AIzaSyArhKRF62AP0Ggwhq0JRgJlJS5UwAeYolA",
               "AIzaSyDICubFC6OVgraLNVWjuQI_kn6wz1IdxjE"]
-gKeyIndex = 0
-googleKey = googleKeys[gKeyIndex]
 
 gNamesKeys = ["sqlite_updater", "sqlite1", "sqlite3", "sqlite4", "sqlite5"]
-gnKeyIndex = 0
-gNamesKey = gNamesKeys[gnKeyIndex]
 
 args = sys.argv
 
 if len(args) == 1:
-    for ind in xrange(800):
-        stat = False
-        minInd = ind * 10
-        maxInd = minInd + 9
-        while (stat != True):
-            try:
-                stat = hackyUpdate(service="Google Places", 
-                                     key=googleKey, minIndex=minInd, 
-                                     maxIndex=maxInd)
-            except:
-                gKeyIndex += 1
-                if gKeyIndex >= (10 * len(googleKeys)): stat = True
-                googleKey = googleKeys[(gKeyIndex%(len(googleKeys)))]
-    for ind in xrange(800):
-        stat = False
-        minInd = ind * 10
-        maxInd = minInd + 9
-        while (stat != True):
-            try:
-                stat = hackyUpdate(service="Google Geocoding", 
-                                     key=googleKey, minIndex=minInd, 
-                                     maxIndex=maxInd)
-            except:
-                gKeyIndex += 1
-                if gKeyIndex >= (10 * len(googleKeys)): stat = True
-                googleKey = googleKeys[(gKeyIndex%(len(googleKeys)))]
-    for ind in xrange(800):
-        stat = False
-        minInd = ind * 10
-        maxInd = (ind + 1) * 10
-        while (stat != True):
-            try:
-                stat = hackyUpdate(service="GeoNames", 
-                                     key=gNamesKey, minIndex=minInd, 
-                                     maxIndex=maxInd)
-            except:
-                gnKeyIndex += 1
-                if gnKeyIndex >= (10 * len(gNamesKeys)): stat = True
-                gNamesKey = gNamesKeys[(gnKeyIndex%(len(gNamesKeys)))]
+    runUpdate(service="Google Geocoding", keySet=googleKeys)
+    runUpdate(service="Google Places", keySet=googleKeys)
+    runUpdate(service="GeoNames", keySet=gNamesKeys)
 
 else:
 
