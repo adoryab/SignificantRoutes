@@ -5,10 +5,14 @@
 
 ##### COMMAND LINE USAGE #####
 
-# SYNTAX: "python update.py [service to use] [parameter] [value]"
+# SYNTAX: "python update.py [service to use] 
+#          [parameter value] ... [parameter value]"
 
 # [service to use] = "Google Geocoding" or "GeoNames" or "Google Places"
 # [parameter] = "minIndex" or "maxIndex" or "key"
+
+# if just "python update.py" is called, all services will be run with
+# default settings
 
 import requests
 import sqlite3
@@ -21,6 +25,9 @@ class InputException(Exception): # Raised for improper command line inputs
     pass
 
 def updateRow(data, **information):
+    """Updates a single row in a table using id_col to locate rows
+    and data to provide columns and values; adds new columns where
+    necessary"""
     table = information.get('table', "locations")
     id_col = information.get('id_col', "_id")
     database = information.get('database', "locations.db")
@@ -44,11 +51,13 @@ def updateRow(data, **information):
     con.commit()
     if "connection" not in information: con.close()
 
-def getJSON(URL, parameters): # simply calls a get request
+def getJSON(URL, parameters):
+    """Simply calls a HTTP get request and gets a JSON object"""
     r = requests.get(url=URL, params=parameters)
     return r.json()
 
-def getData(URL, item, key): # creates dictionary to be used for row update
+def getData(URL, item, key):
+    """Creates a dictionary using a JSON request for row updates"""
     parameters = dict()
     latIndex, lonIndex = 3, 4 # locations in item where lat/lon are
     # Google Geocoding API
@@ -120,6 +129,7 @@ def getData(URL, item, key): # creates dictionary to be used for row update
     return data
 
 def updateTable(**kwargs):
+    """Updates an entire table using latitude/longitude data"""
     key = kwargs.get('key', None)
     database = kwargs.get('database', "locations.db")
     table = kwargs.get('table', "locations")
@@ -145,6 +155,8 @@ def updateTable(**kwargs):
     if "connection" not in kwargs: con.close()
 
 def createTable(database, table, original):
+    """Creates a new table based on a template 
+    after checking that it doesn't already exist"""
     con = sqlite3.connect(database)
     c = con.cursor()
     c.execute("SELECT name from sqlite_master WHERE type='table' AND name='{tn}'"\
@@ -165,6 +177,7 @@ def createTable(database, table, original):
 
 def update(service, database="locations.db", table="locations", 
            minIndex=0, maxIndex=None, key=None):
+    """Given a service and database, etc., updates address/location data"""
     # contains default keys, calls createTable and updateTable
     if service == "Google Geocoding":
         newTable = "geocoding"
@@ -196,6 +209,7 @@ def update(service, database="locations.db", table="locations",
 
 def hackyUpdate(service, database="locations.db", table="locations",
                 minIndex=0, maxIndex=None, key=None):
+    """Just returns true when an update is successful"""
     update(service=service, database=database, table=table, minIndex=minIndex,
            maxIndex=maxIndex, key=key)
     return True
@@ -203,6 +217,7 @@ def hackyUpdate(service, database="locations.db", table="locations",
 def runUpdate(service, keySet, minIndex=0, maxIndex=8000, 
               chunkSize=10, attempts=10):
     # LIMITATION: maxIndex must be an int!
+    """Runs an update in chunks; rotates keys to assure success"""
     keyIndex = 0
     key = keySet[keyIndex%(len(keySet))]
     for ind in xrange(minIndex, (maxIndex/chunkSize)+1):
@@ -220,7 +235,6 @@ def runUpdate(service, keySet, minIndex=0, maxIndex=8000,
                     raise StatusException("All keys failed!")
                 key = keySet[(keyIndex%(len(keySet)))]
 
-
 googleKeys = ["AIzaSyAp4w8LLCVozx5X9SrJ3PiflwCng1ik1Y8",
               "AIzaSyB6gqWstIJN6WipZRAyzPVO5umSD3j4tWY",
               "AIzaSyC6oyobPYiUlnDNsnJrMTMZ-2kB8P_t6VA",
@@ -233,7 +247,8 @@ googleKeys = ["AIzaSyAp4w8LLCVozx5X9SrJ3PiflwCng1ik1Y8",
               "AIzaSyArhKRF62AP0Ggwhq0JRgJlJS5UwAeYolA",
               "AIzaSyDICubFC6OVgraLNVWjuQI_kn6wz1IdxjE"]
 
-gNamesKeys = ["sqlite_updater", "sqlite1", "sqlite3", "sqlite4", "sqlite5"]
+gNamesKeys = ["sqlite_updater", "sqlite1", "sqlite3", 
+              "sqlite4", "sqlite5"]
 
 args = sys.argv
 
