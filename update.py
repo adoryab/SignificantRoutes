@@ -14,10 +14,10 @@ import requests
 import sqlite3
 import sys
 
-class StatusException(Exception):
+class StatusException(Exception): # Raised when results aren't returned
     pass
 
-class InputException(Exception):
+class InputException(Exception): # Raised for improper command line inputs
     pass
 
 def updateRow(data, **information):
@@ -30,11 +30,11 @@ def updateRow(data, **information):
     cursor.execute("PRAGMA table_info({tn})".format(tn=table))
     existingCols = [item[nameIndex] for item in cursor.fetchall()]
     newColumns = [item for item in data if item not in existingCols]
-    for col in newColumns:
+    for col in newColumns: # defaults to adding a TEXT column
         cursor.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' TEXT"\
                        .format(tn=table, cn=col))
     ID = data[id_col]
-    del data[id_col]
+    del data[id_col] # removes ID from data to avoid updating ID
     for item in data:
         if (type(data[item]) == str and "'" in data[item]): 
             data[item] = (data[item]).replace("'", "")
@@ -44,20 +44,21 @@ def updateRow(data, **information):
     con.commit()
     if "connection" not in information: con.close()
 
-def getJSON(URL, parameters):
+def getJSON(URL, parameters): # simply calls a get request
     r = requests.get(url=URL, params=parameters)
     return r.json()
 
-def getData(URL, item, key):
+def getData(URL, item, key): # creates dictionary to be used for row update
     parameters = dict()
+    latIndex, lonIndex = 3, 4 # locations in item where lat/lon are
     # Google Geocoding API
     if URL == "https://maps.googleapis.com/maps/api/geocode/json":
-        translator = dict()
+        translator = dict() # converts Google's descriptions
         translator['administrative_area_level_2'] = "county"
         translator['administrative_area_level_1'] = "state"
         translator['route'] = "street"
         translator['political'] = "city"
-        parameters['latlng'] = str(item[3]) + "," + str(item[4])
+        parameters['latlng'] = str(item[latIndex]) + "," + str(item[lonIndex])
         parameters['key'] = key
         JSONObject = getJSON(URL, parameters)
         if JSONObject['status'] != "OK":
@@ -73,8 +74,8 @@ def getData(URL, item, key):
                     data['locType'] = name
     # GeoNames API (Places)
     elif URL == "http://api.geonames.org/findNearbyPlaceNameJSON?":
-        parameters['lat'] = str(item[3])
-        parameters['lng'] = str(item[4])
+        parameters['lat'] = str(item[latIndex])
+        parameters['lng'] = str(item[lonIndex])
         parameters['username'] = key
         JSONObject = getJSON(URL, parameters)
         if 'geonames' not in JSONObject: raise StatusException("Uh oh! " 
@@ -87,8 +88,8 @@ def getData(URL, item, key):
             data[locType] = name
     # GeoNames API (Intersection)
     elif URL == "http://api.geonames.org/findNearestIntersectionJSON?":
-        parameters['lat'] = str(item[3])
-        parameters['lng'] = str(item[4])
+        parameters['lat'] = str(item[latIndex])
+        parameters['lng'] = str(item[lonIndex])
         parameters['username'] = key
         JSONObject = getJSON(URL, parameters)
         if 'intersection' not in JSONObject: raise StatusException("No data returned")
@@ -105,14 +106,15 @@ def getData(URL, item, key):
     # Google Nearby Places
     elif URL == "https://maps.googleapis.com/maps/api/place/nearbysearch/json?":
         parameters['key'] = key
-        parameters['location'] = str(item[3]) + "," + str(item[4])
+        parameters['location'] = str(item[latIndex]) + "," + str(item[lonIndex])
         parameters['radius'] = 500
         parameters['rankby'] = "prominence"
         JSONObject = getJSON(URL, parameters)
         if JSONObject['status'] != "OK": raise StatusException(status)
         data = dict()
         places = JSONObject['results']
-        for i in xrange(1, 6):
+        numPlaces = 5 # number of places to return
+        for i in xrange(1, numPlaces + 1):
             data["name_" + str(i)] = places[i]['name']
             data["type_" + str(i)] = places[i]['types'][0]
     return data
@@ -135,9 +137,9 @@ def updateTable(**kwargs):
                               .format(tn=table, idc=idc, min=minIndex))
     for item in cursor.fetchall():
         data = getData(URL, item, key)
-        ID = item[0]
+        ID = item[0] # assumes ID is first column
         data[idc] = ID
-        print "updating", ID, ("(%s)" % (URL))
+        print "updating", ID, ("(%s)" % (URL)) # print statement for CL monitoring
         updateRow(data, table=table, id_col=idc, database=database, connection=con)
     con.commit()
     if "connection" not in kwargs: con.close()
@@ -147,9 +149,9 @@ def createTable(database, table, original):
     c = con.cursor()
     c.execute("SELECT name from sqlite_master WHERE type='table' AND name='{tn}'"\
               .format(tn=table))
-    fetch = c.fetchall()
+    fetch = c.fetchall() # checks to see if table already exists
     if (len(fetch) > 0 and table in fetch[0]): return
-    with con:
+    with con: # otherwise creates table using statement to create original table
         cursor = con.cursor()
         cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' \
                         AND name='{ot}'".format(ot=original))
@@ -163,6 +165,7 @@ def createTable(database, table, original):
 
 def update(type, database="locations.db", table="locations", 
            minIndex=0, maxIndex=None, key=None):
+    # contains default keys, calls createTable and updateTable
     if type == "Google Geocoding":
         newTable = "geocoding"
         if key == None:
@@ -191,7 +194,7 @@ def update(type, database="locations.db", table="locations",
         updateTable(key=key, URL=URL_places, table=newTable,
                     minIndex=minIndex, maxIndex=maxIndex)
 
-args = sys.argv
+args = sys.argv # handles multi-word service names
 if len(args) > 0 and args[1] == "Google":
     args[1] = args[1] + " " + args[2]
     length = len(args)
