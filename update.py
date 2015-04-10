@@ -244,10 +244,6 @@ def runUpdate(service, keySet, minIndex=0, maxIndex=8000,
     min and maxIndex: minimum and maximum id values in database to work with
     chunkSize: groupings- higher means faster but more slowdown with errors
     attempts: attempts before giving up and assuming all keys are dead"""
-    try: 
-        assert(skips < chunkSize)
-    except: 
-        raise InputError ("Skips must be less than chunk size!")
     keyIndex = 0
     skipped = 0
     key = keySet[keyIndex%(len(keySet))]
@@ -277,6 +273,9 @@ def runUpdate(service, keySet, minIndex=0, maxIndex=8000,
                             break
                 key = keySet[(keyIndex%(len(keySet)))]
 
+
+# TODO: store keys somewhere else
+
 googleKeys = ["AIzaSyAp4w8LLCVozx5X9SrJ3PiflwCng1ik1Y8",
               "AIzaSyB6gqWstIJN6WipZRAyzPVO5umSD3j4tWY",
               "AIzaSyC6oyobPYiUlnDNsnJrMTMZ-2kB8P_t6VA",
@@ -287,7 +286,12 @@ googleKeys = ["AIzaSyAp4w8LLCVozx5X9SrJ3PiflwCng1ik1Y8",
               "AIzaSyCODgpWYCzNUIkzID1TyPXIa91kNa8LU_I",
               "AIzaSyCF6oPByEx4NQyNF9lKZ-jpYj3SC5waOfo",
               "AIzaSyArhKRF62AP0Ggwhq0JRgJlJS5UwAeYolA",
-              "AIzaSyDICubFC6OVgraLNVWjuQI_kn6wz1IdxjE"]
+              "AIzaSyDICubFC6OVgraLNVWjuQI_kn6wz1IdxjE",
+              "AIzaSyCpE7FF2O1PLrhNSGBb2iGdt6Zsji0iOOk",
+              "AIzaSyA0FvsQjfOd-yiDaE_QmngfAdZURxr2djQ",
+              "AIzaSyBkXo1vsBBLqbua26WOMKt4Hcjk4SgObrM",
+              "AIzaSyDRdVL-4M-2gIJem0ebiWXxCeShsBe4xC0",
+              "AIzaSyBs4gSTVsvYxL9yTITNnT0O_b9Sv95KEsU"]
 
 gNamesKeys = ["sqlite_updater", "sqlite1", "sqlite3", 
               "sqlite4", "sqlite5", "0sqlite", "sqlite6"]
