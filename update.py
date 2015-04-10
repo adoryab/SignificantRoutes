@@ -202,10 +202,21 @@ def update(service, database="locations.db", table="locations",
         URL_intersections = "http://api.geonames.org/findNearestIntersectionJSON?"
         URL_places = "http://api.geonames.org/findNearbyPlaceNameJSON?"
         createTable(database, newTable, table)
-        updateTable(key=key, URL=URL_intersections, table=newTable,
-                    minIndex=minIndex, maxIndex=maxIndex)
-        updateTable(key=key, URL=URL_places, table=newTable,
-                    minIndex=minIndex, maxIndex=maxIndex)
+        try:
+            try:
+                updateTable(key=key, URL=URL_intersections, table=newTable,
+                            minIndex=minIndex, maxIndex=maxIndex)
+                updateTable(key=key, URL=URL_places, table=newTable,
+                            minIndex=minIndex, maxIndex=maxIndex)
+            except StatusException:
+                try:
+                    updateTable(key=key, URL=URL_intersections, table=newTable,
+                                minIndex=minIndex, maxIndex=maxIndex)
+                except StatusException: 
+                    updateTable(key=key, URL=URL_places, table=newTable,
+                            minIndex=minIndex, maxIndex=maxIndex)
+        except:
+            pass
 
 def hackyUpdate(service, database="locations.db", table="locations",
                 minIndex=0, maxIndex=None, key=None):
@@ -256,6 +267,12 @@ if len(args) == 1:
     runUpdate(service="Google Geocoding", keySet=googleKeys)
     runUpdate(service="Google Places", keySet=googleKeys)
     runUpdate(service="GeoNames", keySet=gNamesKeys)
+
+elif (len(args) == 2) or (len(args) == 3 and args[1] == "Google"):
+    service = "".join([item for item in args[1:]])
+    if service == "GeoNames": keySet = gNamesKeys
+    else: keySet = googleKeys
+    runUpdate(service=service, keySet=keySet)
 
 else:
 
