@@ -36,7 +36,7 @@ def updateRow(data, **information):
     ID = data[id_col]
     del data[id_col] # removes ID from data to avoid updating ID
     for item in data:
-        if (type(data[item]) == str and "'" in data[item]): 
+        if ((type(data[item]) == str or type(data[item]) == unicode) and "'" in data[item]): 
             data[item] = (data[item]).replace("'", "")
         cursor.execute("UPDATE {tn} SET {cn} = ('{value}') WHERE {idc} = ({ID})"\
                        .format(tn=table, cn=item, value=data[item], 
@@ -71,7 +71,7 @@ def getData(URL, item, key): # creates dictionary to be used for row update
                 if locType in translator: locType = translator[locType]
                 if locType not in data:
                     name = item['short_name']
-                    data['locType'] = name
+                    data[locType] = name
     # GeoNames API (Places)
     elif URL == "http://api.geonames.org/findNearbyPlaceNameJSON?":
         parameters['lat'] = str(item[latIndex])
@@ -110,7 +110,7 @@ def getData(URL, item, key): # creates dictionary to be used for row update
         parameters['radius'] = 500
         parameters['rankby'] = "prominence"
         JSONObject = getJSON(URL, parameters)
-        if JSONObject['status'] != "OK": raise StatusException(status)
+        if JSONObject['status'] != "OK": raise StatusException(JSONObject['status'])
         data = dict()
         places = JSONObject['results']
         numPlaces = 5 # number of places to return
@@ -163,10 +163,10 @@ def createTable(database, table, original):
     con.commit()
     con.close()
 
-def update(type, database="locations.db", table="locations", 
+def update(service, database="locations.db", table="locations", 
            minIndex=0, maxIndex=None, key=None):
     # contains default keys, calls createTable and updateTable
-    if type == "Google Geocoding":
+    if service == "Google Geocoding":
         newTable = "geocoding"
         if key == None:
             key = "AIzaSyB3ffCdODdeKP8zz1CvO40QRqpDB5UzHiA"
@@ -174,7 +174,7 @@ def update(type, database="locations.db", table="locations",
         createTable(database, newTable, table)
         updateTable(key=key, URL=URL, table=newTable,
                     minIndex=minIndex, maxIndex=maxIndex)
-    elif type == "Google Places":
+    elif service == "Google Places":
         newTable = "places"
         if key == None:
             key = "AIzaSyCN84vI7drlWNjVwPM-pNLZnV5HW0OAEVc"
@@ -182,7 +182,7 @@ def update(type, database="locations.db", table="locations",
         createTable(database, newTable, table)
         updateTable(key=key, URL=URL, table=newTable,
                     minIndex=minIndex, maxIndex=maxIndex)
-    elif type == "GeoNames":
+    elif service == "GeoNames":
         newTable = "GeoNames"
         if key == None:
             key = "sqlite1"
@@ -194,34 +194,85 @@ def update(type, database="locations.db", table="locations",
         updateTable(key=key, URL=URL_places, table=newTable,
                     minIndex=minIndex, maxIndex=maxIndex)
 
-args = sys.argv # handles multi-word service names
-if len(args) > 0 and args[1] == "Google":
-    args[1] = args[1] + " " + args[2]
-    length = len(args)
-    for i in xrange(2, (length-1)):
-        args[i] = args[i+1]
-    args = args[:-1]
+def hackyUpdate(service, database="locations.db", table="locations",
+                minIndex=0, maxIndex=None, key=None):
+    update(service=service, database=database, table=table, minIndex=minIndex,
+           maxIndex=maxIndex, key=key)
+    return True
 
-arg = dict()
-arg['service'] = args[1]
-arg['minIndex'] = 0
-arg['maxIndex'] = None
-arg['key'] = None
+googleKeys = ["AIzaSyAp4w8LLCVozx5X9SrJ3PiflwCng1ik1Y8",
+              "AIzaSyB6gqWstIJN6WipZRAyzPVO5umSD3j4tWY",
+              "AIzaSyC6oyobPYiUlnDNsnJrMTMZ-2kB8P_t6VA",
+              "AIzaSyD52DsLAJFLRXFkIv_LRJtdOK7_ESjYKDM",
+              "AIzaSyC6A-dlO1A-tobttQINQqBlLf7yA-fKhHU",
+              "AIzaSyDWwG3t6J174Db1rNy1HMTNYK0I7qjphGM"]
+gKeyIndex = 0
+googleKey = googleKeys[gKeyIndex]
 
-if "minIndex" in args and args.index("minIndex") != (len(args) - 1):
-    try:
-        arg['minIndex'] = int(args[args.index("minIndex")+1])
-    except: raise InputException("minIndex must be an int!")
+gNamesKeys = ["sqlite_updater", "sqlite1", "sqlite3", "sqlite4", "sqlite5"]
+gnKeyIndex = 0
+gNamesKey = gNamesKeys[gnKeyIndex]
 
-if "maxIndex" in args and args.index("maxIndex") != (len(args) - 1):
-    try:
-        arg['maxIndex'] = int(args[args.index("maxIndex")+1])
-    except: raise InputException("maxIndex must be an int!")
+args = sys.argv
 
-if "key" in args and args.index("key") != (len(args) - 1):
-    try:
-        arg['key'] = str(args[args.index("key")+1])
-    except: raise InputException("key must be a string!")
+if len(args) == 1:
+    for ind in xrange(800):
+        stat = False
+        minInd = ind * 10
+        maxInd = minInd + 9
+        while (stat != True):
+            try:
+                stat = hackyUpdate(service="Google Places", 
+                                     key=googleKey, minIndex=minInd, 
+                                     maxIndex=maxInd)
+            except:
+                gKeyIndex += 1
+                if gKeyIndex >= (2 * len(googleKeys)): stat = True
+                googleKey = googleKeys[(gKeyIndex%(len(googleKeys)))]
+    for ind in xrange(800):
+        stat = False
+        minInd = ind * 10
+        maxInd = (ind + 1) * 10
+        while (stat != True):
+            try:
+                stat = hackyUpdate(service="GeoNames", 
+                                     key=gNamesKey, minIndex=minInd, 
+                                     maxIndex=maxInd)
+            except:
+                gnKeyIndex += 1
+                if gnKeyIndex >= (2 * len(gNamesKeys)): stat = True
+                gNamesKey = gNamesKeys[(gnKeyIndex%(len(gNamesKeys)))]
 
-update(type=arg['service'], minIndex=arg['minIndex'],
-       maxIndex=arg['maxIndex'], key=arg['key'])
+else:
+
+    # handles multi-word service names
+    if len(args) > 1 and args[1] == "Google":
+        args[1] = args[1] + " " + args[2]
+        length = len(args)
+        for i in xrange(2, (length-1)):
+            args[i] = args[i+1]
+        args = args[:-1]
+
+    arg = dict()
+    arg['service'] = args[1]
+    arg['minIndex'] = 0
+    arg['maxIndex'] = None
+    arg['key'] = None
+
+    if "minIndex" in args and args.index("minIndex") != (len(args) - 1):
+        try:
+            arg['minIndex'] = int(args[args.index("minIndex")+1])
+        except: raise InputException("minIndex must be an int!")
+
+    if "maxIndex" in args and args.index("maxIndex") != (len(args) - 1):
+        try:
+            arg['maxIndex'] = int(args[args.index("maxIndex")+1])
+        except: raise InputException("maxIndex must be an int!")
+
+    if "key" in args and args.index("key") != (len(args) - 1):
+        try:
+            arg['key'] = str(args[args.index("key")+1])
+        except: raise InputException("key must be a string!")
+
+    update(service=arg['service'], minIndex=arg['minIndex'],
+           maxIndex=arg['maxIndex'], key=arg['key'])
