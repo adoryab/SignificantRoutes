@@ -17,12 +17,23 @@
 import requests
 import sqlite3
 import sys
+from math import radians, cos, sin, asin, sqrt
 
 class StatusException(Exception): # Raised when results aren't returned
     pass
 
 class InputException(Exception): # Raised for improper command line inputs
     pass
+
+def haversine(lat1, lon1, lat2, lon2):
+    """Calculate distance between two lat/lon points"""
+    lat1, lon1, lat2, lon2 = map(radians, [float(lat1), float(lon1),
+                                           float(lat2), float(lon2)])
+    deltaLat, deltaLon = lat2 - lat1, lon2 - lon1
+    a = sin(deltaLat/2)**2 + cos(lat1) * cos(lat2) * sin(deltaLon/2)**2
+    b = 2 * asin(sqrt(a))
+    radius = 3956
+    return (float(radius) * b)
 
 def updateRow(data, **information):
     """Updates a single row in a table using id_col to locate rows
@@ -94,7 +105,7 @@ def getData(URL, item, key):
         for item in location:
             locType = item
             name = location[locType]
-            data[locType] = name
+            data[(locType + "_places")] = name
     # GeoNames API (Intersection)
     elif URL == "http://api.geonames.org/findNearestIntersectionJSON?":
         parameters['lat'] = str(item[latIndex])
@@ -102,20 +113,21 @@ def getData(URL, item, key):
         parameters['username'] = key
         JSONObject = getJSON(URL, parameters)
         if 'intersection' not in JSONObject: raise StatusException("No data returned")
-        data = dict()
         intersection = JSONObject['intersection']
+        data = dict()
         for item in intersection:
             locType = item
             name = intersection[locType]
-            data[locType] = name
+            data[(locType + "_intersections")] = name
         street1, street2 = intersection['street1'], intersection['street2']
         if street1 > street2: street1, street2 = street2, street1
         streets = street1 + " at " + street2
-        data["streets"] = streets
+        data["streets_intersections"] = streets
     # Google Nearby Places
     elif URL == "https://maps.googleapis.com/maps/api/place/nearbysearch/json?":
         parameters['key'] = key
-        parameters['location'] = str(item[latIndex]) + "," + str(item[lonIndex])
+        itemLat, itemLon = str(item[latIndex]), str(item[lonIndex])
+        parameters['location'] = itemLat + "," + itemLon
         parameters['radius'] = 500
         parameters['rankby'] = "prominence"
         JSONObject = getJSON(URL, parameters)
@@ -126,6 +138,12 @@ def getData(URL, item, key):
         for i in xrange(1, numPlaces + 1):
             data["name_" + str(i)] = places[i]['name']
             data["type_" + str(i)] = places[i]['types'][0]
+            lat = places[i]['geometry']['location']['lat']
+            lon = places[i]['geometry']['location']['lng']
+            data["lat_" + str(i)] = lat
+            data["lon_" + str(i)] = lon
+            data["distance_" + str(i)] = haversine(itemLat, itemLon, 
+                                                   lat, lon)
     return data
 
 def updateTable(**kwargs):
@@ -202,23 +220,12 @@ def update(service, database="locations.db", table="locations",
         URL_intersections = "http://api.geonames.org/findNearestIntersectionJSON?"
         URL_places = "http://api.geonames.org/findNearbyPlaceNameJSON?"
         createTable(database, newTable, table)
-        try:
-            try:
-                updateTable(key=key, URL=URL_intersections, table=newTable,
-                            minIndex=minIndex, maxIndex=maxIndex)
-                updateTable(key=key, URL=URL_places, table=newTable,
-                            minIndex=minIndex, maxIndex=maxIndex)
-            except StatusException:
-                try:
-                    updateTable(key=key, URL=URL_intersections, table=newTable,
-                                minIndex=minIndex, maxIndex=maxIndex)
-                except StatusException: 
-                    updateTable(key=key, URL=URL_places, table=newTable,
-                            minIndex=minIndex, maxIndex=maxIndex)
-        except:
-            pass
+        updateTable(key=key, URL=URL_intersections, table=newTable,
+                    minIndex=minIndex, maxIndex=maxIndex)
+        updateTable(key=key, URL=URL_places, table=newTable,
+                    minIndex=minIndex, maxIndex=maxIndex)
 
-def hackyUpdate(service, database="locations.db", table="locations",
+def verifiedUpdate(service, database="locations.db", table="locations",
                 minIndex=0, maxIndex=None, key=None):
     """Just returns true when an update is successful"""
     update(service=service, database=database, table=table, minIndex=minIndex,
@@ -226,24 +233,48 @@ def hackyUpdate(service, database="locations.db", table="locations",
     return True
 
 def runUpdate(service, keySet, minIndex=0, maxIndex=8000, 
-              chunkSize=10, attempts=10):
+              chunkSize=10, attempts=10, skips=5):
     # LIMITATION: maxIndex must be an int!
-    """Runs an update in chunks; rotates keys to assure success"""
+    """Runs an update in chunks; rotates keys to ensure success
+
+    PARAMETERS:
+    service: service to use (currently only supports Google Places,
+                             Google Geocoding, and GeoNames)
+    keySet: set of keys for that service
+    min and maxIndex: minimum and maximum id values in database to work with
+    chunkSize: groupings- higher means faster but more slowdown with errors
+    attempts: attempts before giving up and assuming all keys are dead"""
+    try: 
+        assert(skips < chunkSize)
+    except: 
+        raise InputError ("Skips must be less than chunk size!")
     keyIndex = 0
+    skipped = 0
     key = keySet[keyIndex%(len(keySet))]
-    for ind in xrange(minIndex, (maxIndex/chunkSize)+1):
+    offset = minIndex%chunkSize
+    for ind in xrange((minIndex/chunkSize), (maxIndex/chunkSize)+1):
         status = False
-        minInd = ind * chunkSize
+        minInd = ind * chunkSize + offset
         maxInd = minInd + (chunkSize - 1)
         while (status != True):
             try:
-                status = hackyUpdate(service=service, 
+                status = verifiedUpdate(service=service, 
                                      key=key, minIndex=minInd, 
                                      maxIndex=maxInd)
             except:
                 keyIndex += 1
                 if keyIndex >= (attempts * len(keySet)): 
-                    raise StatusException("All keys failed!")
+                    if skipped == skips:
+                        raise StatusException("All keys failed!")
+                    else: 
+                        skipped += 1
+                        keyIndex -= 1 # back to current key
+                        if minInd < maxInd:
+                            minInd += 1
+                            continue
+                        else:
+                            skipped = 0
+                            break
                 key = keySet[(keyIndex%(len(keySet)))]
 
 googleKeys = ["AIzaSyAp4w8LLCVozx5X9SrJ3PiflwCng1ik1Y8",
@@ -268,12 +299,6 @@ if len(args) == 1:
     runUpdate(service="Google Places", keySet=googleKeys)
     runUpdate(service="GeoNames", keySet=gNamesKeys)
 
-elif (len(args) == 2) or (len(args) == 3 and args[1] == "Google"):
-    service = "".join([item for item in args[1:]])
-    if service == "GeoNames": keySet = gNamesKeys
-    else: keySet = googleKeys
-    runUpdate(service=service, keySet=keySet)
-
 else:
 
     # handles multi-word service names
@@ -287,7 +312,7 @@ else:
     arg = dict()
     arg['service'] = args[1]
     arg['minIndex'] = 0
-    arg['maxIndex'] = None
+    arg['maxIndex'] = 8000
     arg['key'] = None
 
     if "minIndex" in args and args.index("minIndex") != (len(args) - 1):
@@ -305,5 +330,11 @@ else:
             arg['key'] = str(args[args.index("key")+1])
         except: raise InputException("key must be a string!")
 
-    update(service=arg['service'], minIndex=arg['minIndex'],
-           maxIndex=arg['maxIndex'], key=arg['key'])
+    if arg['key'] == None:
+        if "Google" in arg['service']: arg['key'] = googleKeys
+        else: arg['key'] = gNamesKeys
+    else:
+        arg['key'] = [arg['key']]
+
+    runUpdate(service=arg['service'], minIndex=arg['minIndex'],
+              maxIndex=arg['maxIndex'], keySet=arg['key'])
