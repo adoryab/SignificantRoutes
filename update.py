@@ -248,7 +248,7 @@ googleKeys = ["AIzaSyAp4w8LLCVozx5X9SrJ3PiflwCng1ik1Y8",
               "AIzaSyDICubFC6OVgraLNVWjuQI_kn6wz1IdxjE"]
 
 gNamesKeys = ["sqlite_updater", "sqlite1", "sqlite3", 
-              "sqlite4", "sqlite5"]
+              "sqlite4", "sqlite5", "0sqlite", "sqlite6"]
 
 args = sys.argv
 
