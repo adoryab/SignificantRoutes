@@ -220,10 +220,20 @@ def update(service, database="locations.db", table="locations",
         URL_intersections = "http://api.geonames.org/findNearestIntersectionJSON?"
         URL_places = "http://api.geonames.org/findNearbyPlaceNameJSON?"
         createTable(database, newTable, table)
-        updateTable(key=key, URL=URL_intersections, table=newTable,
-                    minIndex=minIndex, maxIndex=maxIndex)
-        updateTable(key=key, URL=URL_places, table=newTable,
-                    minIndex=minIndex, maxIndex=maxIndex)
+        try:
+            updateTable(key=key, URL=URL_intersections, table=newTable,
+                        minIndex=minIndex, maxIndex=maxIndex)
+            try:
+                updateTable(key=key, URL=URL_places, table=newTable,
+                            minIndex=minIndex, maxIndex=maxIndex)
+            except StatusException:
+                pass
+        except:
+            try:
+                updateTable(key=key, URL=URL_places, table=newTable,
+                            minIndex=minIndex, maxIndex=maxIndex)
+            except StatusException:
+                raise StatusException("Failed to update intersection and place!")
 
 def verifiedUpdate(service, database="locations.db", table="locations",
                 minIndex=0, maxIndex=None, key=None):
