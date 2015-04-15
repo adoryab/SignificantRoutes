@@ -11,7 +11,7 @@ from datetime import datetime
 def convertTimestamp(item):
     unixTime = item['timestamp']
     if len(str(int(unixTime))) > 10:
-    	unixTime = unixTime/1000.0
+        unixTime = unixTime/1000.0
     realTime = datetime.fromtimestamp(unixTime)
     result = dict()
     result['year'] = realTime.year

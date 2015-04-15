@@ -85,6 +85,34 @@ class Updater(object):
             raise IOError("Invalid table!")
         return (column in self.getColumns(table))
 
+    def getColumnsForRow(self, table, id_col, ID, error=False, con=None):
+        """Lists all columns within a table that exist for a row
+
+        PARAMETERS
+        table: table to check
+        id_col: id column for row
+        ID: id of row
+
+        OPTIONAL
+        error: set to True to raise error if table doesn't exist
+        con: pre-existing sqlite connection"""
+
+        conCreated = False
+        presentCols = []
+        if (con is None):
+            con, conCreated = self.getConnection(), True
+        columns = self.getColumns(table=table, error=error, con=con)
+        for column in columns:
+            with con:
+                cur = con.cursor()
+                cur.execute("SELECT * FROM {tn} WHERE {idc} = {id} AND {cn} IS NOT NULL"\
+                            .format(tn=table, idc=id_col, id=ID, cn=column))
+                if len(cur.fetchall()) > 0:
+                    presentCols.append(column)
+        if conCreated:
+            con.close()
+        return presentCols
+
     def getIndex(self, table, column, error=True):
         """Returns index of column in a table"""
         
@@ -213,15 +241,16 @@ class Updater(object):
                 cur.execute("SELECT * FROM {tn}".format(tn=table))
             fetch = cur.fetchall()
             for item in fetch:
-                itemDict = self.rowAsDict(item, self.getColumns(table))
-                data = fun(itemDict)
                 ID = item[id_index]
+                columns = self.getColumnsForRow(table, id_col, ID)
+                itemDict = self.rowAsDict(item, columns)
+                data = fun(itemDict)
                 if (monitor != 0 and ID%monitor == 0):
                     print "Updating index", ID, "of table", table, "using", str(fun)
                 self.updateRow(data, table, id_col, ID, con=con)
             if conCreated: con.close()
 
-    def getRows(self, table, column, col_value, con=None):
+    def getRows(self, table, column, col_value, id_col="_id", id_index=0, con=None):
         """Gets rows matching certain criteria
 
         PARAMETERS
@@ -230,7 +259,9 @@ class Updater(object):
         col_value: values to check for within column
 
         OPTIONAL
-        con: pre-existing sqlite connection"""
+        con: pre-existing sqlite connection
+        id_col: name of ID column (default _id)
+        id_index: index of ID column (default 0)"""
 
         if (not self.tableExists(table)):
             raise IOError("Invalid table!")
@@ -243,10 +274,9 @@ class Updater(object):
             cur = con.cursor()
             cur.execute("SELECT * FROM {tn} WHERE {cn} = {cv}"\
                         .format(tn=table, cn=column, cv=col_value))
-        columns = self.getColumns(table)
         fetch = cur.fetchall()
         if conCreated: con.close()
-        return [self.rowAsDict(item, columns) for item in fetch]
+        return [self.rowAsDict(item, self.getColumnsForRow(table, id_col, item[id_index])) for item in fetch]
 
     def getDistinctValues(self, table, column, con=None):
         """Gets distinct values in a column
@@ -272,7 +302,7 @@ class Updater(object):
         if conCreated: con.close()
         return [item[0] for item in fetch]
 
-    def getIntersectingValues(self, table, columns, con=None):
+    def getIntersectingValues(self, table, columns, id_col="_id", id_index=0, con=None):
         """Gets values that meet all criteria
 
         PARAMETERS
@@ -280,6 +310,8 @@ class Updater(object):
         columns: dictionary of columns with specified values (or lists)
 
         OPTIONAL
+        id_col: id column in table (default _id)
+        id_index: location of id column (default 0)
         con: pre-existing sqlite connection"""
 
         if (not self.tableExists(table)):
@@ -313,8 +345,7 @@ class Updater(object):
         fetch = cur.fetchall()
         if conCreated:
             con.close()
-        columns = self.getColumns(table)
-        return [self.rowAsDict(item, columns) for item in fetch]
+        return [self.rowAsDict(item, self.getColumnsForRow(table, id_col, item[id_index])) for item in fetch]
 
     def getFrequency(self, table, columns, con=None):
         """Gets number of occurrences that meet certain criteria
@@ -328,7 +359,7 @@ class Updater(object):
 
         return len(self.getIntersectingValues(table, columns, con))
 
-    def getAssociatedValue(self, table, col1, value, col2, con=None):
+    def getAssociatedValue(self, table, col1, value, col2, id_col="_id", id_index=0, con=None):
         """Gets value from col2 associated with value from col1
 
         PARAMETERS
@@ -338,6 +369,8 @@ class Updater(object):
         col2: column containing unknown value
 
         OPTIONAL
+        id_col: id column in table (default _id)
+        id_index: location of id column (default 0)
         con: pre-existing sqlite connection"""
         if (not self.tableExists(table)):
             raise IOError("Invalid table!")
@@ -348,10 +381,14 @@ class Updater(object):
             con, conCreated = self.getConnection(), True
         cur = con.cursor()
         cur.execute("SELECT * FROM {tn} WHERE {cn} = {cv}".format(tn=table, cn=col1, cv=value))
-        columns = self.getColumns(table)
-        item = self.rowAsDict(cur.fetchone(), columns)
+        item = cur.fetchone()
+        columns = self.getColumnsForRow(table, id_col, item[id_index])
+        item = self.rowAsDict(item, columns)
         if conCreated: con.close()
-        return item[col2]
+        if col2 in item:
+            return item[col2]
+        else:
+            raise IOError("Associated column does not exist for this row!")
 
     def addRow(self, table, data, con=None):
         """Adds a row to an existing table
