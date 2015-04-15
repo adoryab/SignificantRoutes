@@ -4,7 +4,6 @@
 
 import sqlite3
 import os
-from datetime import datetime
 
 # CLASSLESS FUNCTIONS
 
@@ -27,6 +26,7 @@ class Updater(object):
 
     def getConnection(self):
         """Produces a connection to the database"""
+
         con = sqlite3.connect(self.database)
         return con
 
@@ -43,8 +43,9 @@ class Updater(object):
             con, conCreated = self.getConnection(), True
         cur, tables = con.cursor(), []
         cur.execute("SELECT name from sqlite_master WHERE type='table'")
+        fetch = cur.fetchall()
         if conCreated: con.close() # avoids wasting processing power
-        return [item[0] for item in cur.fetchall()]
+        return [item[0] for item in fetch]
 
     def tableExists(self, table):
         """Checks whether a table exists in a database"""
@@ -69,21 +70,26 @@ class Updater(object):
                 con, conCreated = self.getConnection(), True
             cur, columns, nameIndex = con.cursor(), [], 1
             # nameIndex = index with column names
-            cursor.execute("PRAGMA table_info({tn})".format(tn=table))
+            cur.execute("PRAGMA table_info({tn})".format(tn=table))
+            fetch = cur.fetchall()
             if conCreated: con.close()
-            return [item[nameIndex] for item in cursor.fetchall()]
+            return [item[nameIndex] for item in fetch]
         elif error:
             raise IOError("Table does not exist")
         else: return []
 
     def columnExists(self, table, column):
         """Checks whether a column exists in a table"""
+
+        if (not self.tableExists(table)):
+            raise IOError("Invalid table!")
         return (column in self.getColumns(table))
 
     def getIndex(self, table, column, error=True):
         """Returns index of column in a table"""
+        
         if self.columnExists(table, column):
-            return self.getColumns().index(column)
+            return self.getColumns(table).index(column)
         elif error:
             raise IOError("Column does not exist!")
 
@@ -98,6 +104,9 @@ class Updater(object):
         colType: type of value in column (default is TEXT)
         error (if set to True, raises error if column exists)
         con: existing connection (defaults to None)"""
+        
+        if (not self.tableExists(table)):
+            raise IOError("Invalid table!")
         if (not self.columnExists(table, column)):
             conCreated = False
             if con is None: 
@@ -105,7 +114,7 @@ class Updater(object):
             with con:
                 cur = con.cursor()
                 cur.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct}"\
-                            .format(tn=table, cn=col, ct=colType))
+                            .format(tn=table, cn=column, ct=colType))
             if conCreated: con.close()
         elif error:
             raise IOError("Column already exists!")
@@ -121,6 +130,7 @@ class Updater(object):
         (defaults to True)
         error: if set to True, raises error if table exists
         con: pre-existing sqlite connection"""
+        
         if (not self.tableExists(table)):
             conCreated = False
             if con is None:
@@ -147,7 +157,9 @@ class Updater(object):
 
         OPTIONAL
         con: existing sqlite connection"""
-
+        
+        if (not self.tableExists(table)):
+            raise IOError("Invalid table!")
         conCreated = False
         if (con is None): 
             con, conCreated = self.getConnection(), True
@@ -165,10 +177,10 @@ class Updater(object):
         result = dict()
         for i in xrange(len(colData)):
             col = colData[i]
-            result[col] = item[i]
+            result[col] = rowData[i]
         return result
 
-    def updateTable(self, table, id_col, fun, minIndex=None, maxIndex=None, con=None):
+    def updateTable(self, table, id_col, fun, minIndex=None, maxIndex=None, con=None, monitor=0):
         """Updates an entire table or a range over the table
 
         PARAMETERS
@@ -179,9 +191,11 @@ class Updater(object):
         OPTIONAL
         minIndex: minimum index to update (inclusive)
         maxIndex: maximum index to update (inclusive)
-        con: pre-existing connection"""
+        con: pre-existing connection
+        monitor: if set to non-zero, prints status on command line every (print)th index"""
 
-        if (not self.tableExists(table)): raise IOError("Invalid table!")
+        if (not self.tableExists(table)): 
+            raise IOError("Invalid table!")
         conCreated = False
         id_index = self.getIndex(table, id_col)
         if (con is None):
@@ -197,12 +211,15 @@ class Updater(object):
                                    .format(tn=table, idc=id_col, min=minIndex))
             else:
                 cur.execute("SELECT * FROM {tn}".format(tn=table))
-            for item in cur.fetchall():
+            fetch = cur.fetchall()
+            for item in fetch:
                 itemDict = self.rowAsDict(item, self.getColumns(table))
                 data = fun(itemDict)
                 ID = item[id_index]
+                if (monitor != 0 and ID%monitor == 0):
+                    print "Updating index", ID, "of table", table, "using", str(fun)
                 self.updateRow(data, table, id_col, ID, con=con)
-        if conCreated: con.close()
+            if conCreated: con.close()
 
     def getRows(self, table, column, col_value, con=None):
         """Gets rows matching certain criteria
@@ -215,13 +232,146 @@ class Updater(object):
         OPTIONAL
         con: pre-existing sqlite connection"""
 
+        if (not self.tableExists(table)):
+            raise IOError("Invalid table!")
+        if (not self.columnExists(table, column)): 
+            raise IOError("Invalid column!")
         conCreated = False
         if (con is None):
-            con, conCreated = sqlite3.connect(self.database), True
+            con, conCreated = self.getConnection(), True
         with con:
             cur = con.cursor()
             cur.execute("SELECT * FROM {tn} WHERE {cn} = {cv}"\
                         .format(tn=table, cn=column, cv=col_value))
         columns = self.getColumns(table)
+        fetch = cur.fetchall()
         if conCreated: con.close()
-        return [self.rowAsDict(item, columns) for item in cur.fetchall()]
+        return [self.rowAsDict(item, columns) for item in fetch]
+
+    def getDistinctValues(self, table, column, con=None):
+        """Gets distinct values in a column
+
+        PARAMETERS
+        table: table to check
+        column: column to check
+
+        OPTIONAL
+        con: pre-existing sqlite connection"""
+
+        if (not self.tableExists(table)):
+            raise IOError("Invalid table!")
+        if (not self.columnExists(table, column)): 
+            raise IOError("Invalid column!")
+        conCreated = False
+        if (con is None):
+            con, conCreated = self.getConnection(), True
+        with con:
+            cur = con.cursor()
+            cur.execute("SELECT DISTINCT {cn} FROM {tn}".format(cn=column, tn=table))
+        fetch = cur.fetchall()
+        if conCreated: con.close()
+        return [item[0] for item in fetch]
+
+    def getIntersectingValues(self, table, columns, con=None):
+        """Gets values that meet all criteria
+
+        PARAMETERS
+        table: table to check
+        columns: dictionary of columns with specified values (or lists)
+
+        OPTIONAL
+        con: pre-existing sqlite connection"""
+
+        if (not self.tableExists(table)):
+            raise IOError("Invalid table!")
+        if (not self.columnExists(table, column)): 
+            raise IOError("Invalid column!")
+        conCreated = False
+        if (con is None):
+            con, conCreated = self.getConnection(), True
+        statement = "SELECT * FROM " + str(table)
+        if len(columns) > 0:
+            statement +=  " WHERE "
+        firstSet = True
+        for column in columns:
+            if (not firstSet):
+                statement += " AND "
+            content = columns[column]
+            if (type(content) == list):
+                firstIteration = True
+                for item in content:
+                    if (not firstIteration):
+                        statement += " OR "
+                    statement += str(column) + " = '" + str(item) + "'"
+                    firstIteration = False
+            else:
+                statement += str(column) + " = '" + str(content) + "'"
+            firstSet = False
+        with con:
+            cur = con.cursor()
+            cur.execute(statement)
+        fetch = cur.fetchall()
+        if conCreated:
+            con.close()
+        columns = self.getColumns(table)
+        return [self.rowAsDict(item, columns) for item in fetch]
+
+    def getFrequency(self, table, columns, con=None):
+        """Gets number of occurrences that meet certain criteria
+
+        PARAMETERS
+        table: table to check
+        columns: dictionary of columns with specified values (or lists)
+
+        OPTIONAL
+        con: pre-existing sqlite connection"""
+
+        return len(self.getIntersectingValues(table, columns, con))
+
+    def getAssociatedValue(self, table, col1, value, col2, con=None):
+        """Gets value from col2 associated with value from col1
+
+        PARAMETERS
+        table: table to check
+        col1: column containing known value
+        value: known value
+        col2: column containing unknown value
+
+        OPTIONAL
+        con: pre-existing sqlite connection"""
+        if (not self.tableExists(table)):
+            raise IOError("Invalid table!")
+        if (not self.columnExists(table, col1) or not self.columnExists(table, col2)): 
+            raise IOError("Invalid column!")
+        conCreated = False
+        if (con is None):
+            con, conCreated = self.getConnection(), True
+        cur = con.cursor()
+        cur.execute("SELECT * FROM {tn} WHERE {cn} = {cv}".format(tn=table, cn=col1, cv=value))
+        columns = self.getColumns(table)
+        item = self.rowAsDict(cur.fetchone(), columns)
+        if conCreated: con.close()
+        return item[col2]
+
+    def addRow(self, table, data, con=None):
+        """Adds a row to an existing table
+
+        PARAMETERS
+        table: table to add to
+        data: dictionary of columns to add to
+
+        OPTIONAL
+        con: pre-existing sqlite connection"""
+
+        conCreated = False
+        if (con is None): 
+            con, conCreated = self.getConnection(), True
+        for item in data:
+            self.createColumn(table, item, con=con)
+            with con:
+                cur = con.cursor()
+                value = str(data[item])
+                if "'" in value: value = value.replace("'", "")
+                cur.execute("INSERT INTO {tn}({cn}) VALUE('{value}')"\
+                            .format(tn=table, cn=item, value=value))
+        if conCreated: con.close()

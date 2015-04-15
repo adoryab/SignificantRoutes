@@ -15,8 +15,8 @@ class Service(object):
     """Object to call API services"""
 
     def __init__(self, name, URL, required=[], optional=[], keys=[], 
-    	         confirm=None, tries=0, skips=0, interpreter=[],
-    	         translator=dict()):
+                 confirm=None, tries=0, skips=0, connects=0,
+                 interpreter=[], translator=dict()):
         """Constructor for Service class
         PARAMETERS
         name: name of service
@@ -30,6 +30,7 @@ class Service(object):
         (needed for key rotation; either list or dictionary)
         tries: attempts to make before declaring all keys dead
         skips: calls to skip in case call, not key, is failing
+        connects: connection attempts to be made before giving up
         interpreter: a list of strings and ints to sort through JSON output
         translator: dictionary to convert names
 
@@ -40,6 +41,7 @@ class Service(object):
         self.translator, self.interpreter = translator, interpreter
         self.attempts, self.tries = 0, tries
         self.skipped, self.skips = 0, skips
+        self.connectAttempts, self.connects = 0, connects
         self.confirmed, self.confirmation = True, None
         if (confirm is not None):
             self.confirmation, self.confirmed = confirm, False
@@ -53,64 +55,70 @@ class Service(object):
         return self.URL
 
     def confirm(self, request):
-    	self.confirm = True
+        self.confirm = True
         if type(self.confirmation) == list:
             for item in self.confirmation:
                 if item not in request:
-                	self.confirmed = False
+                    self.confirmed = False
         elif type(self.confirmation) == dict:
-        	for item in self.confirmation:
-        		if item not in request:
-        			self.confirmed = False
-        		else:
-        			if type(self.confirm[item] == list):
-        				if request[item] not in self.confirmation[item]:
-        					self.confirmed = False
-        			else:
-        				if self.confirmation[item] != request[item]:
-        					self.confirmed = False
+            for item in self.confirmation:
+                if item not in request:
+                    self.confirmed = False
+                else:
+                    if type(self.confirm[item] == list):
+                        if request[item] not in self.confirmation[item]:
+                            self.confirmed = False
+                    else:
+                        if self.confirmation[item] != request[item]:
+                            self.confirmed = False
 
     def advance(self):
-		self.skipped += 1
-	    if (self.skipped > self.skips):
-	    	raise StatusError("All calls and keys failed!")
-	    else:
-	    	self.confirmed = True
+        self.skipped += 1
+        if (self.skipped > self.skips):
+            raise StatusError("All calls and keys failed!")
+        else:
+            self.confirmed = True
 
     def rotate(self):
-    	if self.usesKeys:
-    		self.attempts += 1
-    		if (self.attempts > self.tries):
-	    		self.advance()
-	    		self.attempts = 0
-	    	else:
-	    		self.keyIndex += 1
-	    		self.keyIndex = self.keyIndex%(len(self.keys))
-	    else:
-	    	self.advance()
+        if self.usesKeys:
+            self.attempts += 1
+            if (self.attempts > self.tries):
+                self.advance()
+                self.attempts = 0
+            else:
+                self.keyIndex += 1
+                self.keyIndex = self.keyIndex%(len(self.keys))
+        else:
+            self.advance()
 
     def makeCall(URL, parameters):
-    	self.confirmed = False
+        self.confirmed = False
         while (not self.confirmed):
-            req = requests.get(url=URL, params=callParams)
+            success, self.connects = False, 0
+            while (not success and self.connectAttempts <= self.connects):
+                try:
+                    req = requests.get(url=URL, params=callParams)
+                    success = True
+                except:
+                    self.connectAttempts += 1
             self.confirm(req)
             if (not self.confirmed): self.rotate()
         return req.json()
 
     def interpret(self, call):
-    	for item in self.interpreter:
-    		call = call[item]
-    	return call
+        for item in self.interpreter:
+            call = call[item]
+        return call
 
     def translate(self, call):
-    	for item in self.translator:
-    		value = call[item]
-    		call[self.translator[item]] = value
-    		del call[item]
-    	return call
+        for item in self.translator:
+            value = call[item]
+            call[self.translator[item]] = value
+            del call[item]
+        return call
 
     def process(self, call):
-    	return self.translate(self.interpret(call))
+        return self.translate(self.interpret(call))
 
     def getData(self, inputs):
         """Makes an API call and gets JSON results
