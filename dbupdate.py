@@ -81,23 +81,24 @@ def combineStationCols(item):
 
 def update(): # script to run here
     updater = Updater("locations.db")
-    updater.updateTable(table="locations", id_col="_id", fun=convertTimestamp, monitor=5)
-    updater.updateTable(table="GeoNames", id_col="_id", fun=convertTimestamp, monitor=5)
-    updater.updateTable(table="places", id_col="_id", fun=convertTimestamp, monitor=5)
-    updater.updateTable(table="geocoding", id_col="_id", fun=convertTimestamp, monitor=5)
-    updater.updateTable(table="GeoNames", id_col="_id", fun=getStreetsTransition, monitor=5)
-    updater.updateTable(table="GeoNames", id_col="_id", fun=getAreaTransition, monitor=5)
-    updater.updateTable(table="places", id_col="_id", fun=getPlacesTransition, monitor=5)
-    updater.updateTable(table="geocoding", id_col="_id", fun=getStreetTransition, monitor=5)
-    updater.updateTable(table="geocoding", id_col="_id", fun=getEstablishmentTransition, monitor=5)
-    updater.updateTable(table="geocoding", id_col="_id", fun=getStationTransition, monitor=5)
-    updater.updateTable(table="GeoNames", id_col="_id", fun=combineStreetsCols, monitor=5)
-    updater.updateTable(table="GeoNames", id_col="_id", fun=combineAreaCols, monitor=5)
-    updater.updateTable(table="places", id_col="_id", fun=combinePlacesCols, monitor=5)
-    updater.updateTable(table="geocoding", id_col="_id", fun=combineStreetCols, monitor=5)
-    updater.updateTable(table="geocoding", id_col="_id", fun=combineEstablishmentCols, monitor=5)
-    updater.updateTable(table="geocoding", id_col="_id", fun=combineStationCols, monitor=5)
-    updater.createTable(table="locations_intersections")
+    con = updater.getConnection()
+    updater.updateTable(table="locations", id_col="_id", fun=convertTimestamp, monitor=5, con=con)
+    updater.updateTable(table="GeoNames", id_col="_id", fun=convertTimestamp, monitor=5, con=con)
+    updater.updateTable(table="places", id_col="_id", fun=convertTimestamp, monitor=5, con=con)
+    updater.updateTable(table="geocoding", id_col="_id", fun=convertTimestamp, monitor=5, con=con)
+    updater.updateTable(table="GeoNames", id_col="_id", fun=getStreetsTransition, monitor=5, con=con)
+    updater.updateTable(table="GeoNames", id_col="_id", fun=getAreaTransition, monitor=5, con=con)
+    updater.updateTable(table="places", id_col="_id", fun=getPlacesTransition, monitor=5, con=con)
+    updater.updateTable(table="geocoding", id_col="_id", fun=getStreetTransition, monitor=5, con=con)
+    updater.updateTable(table="geocoding", id_col="_id", fun=getEstablishmentTransition, monitor=5, con=con)
+    updater.updateTable(table="geocoding", id_col="_id", fun=getStationTransition, monitor=5, con=con)
+    updater.updateTable(table="GeoNames", id_col="_id", fun=combineStreetsCols, monitor=5, con=con)
+    updater.updateTable(table="GeoNames", id_col="_id", fun=combineAreaCols, monitor=5, con=con)
+    updater.updateTable(table="places", id_col="_id", fun=combinePlacesCols, monitor=5, con=con)
+    updater.updateTable(table="geocoding", id_col="_id", fun=combineStreetCols, monitor=5, con=con)
+    updater.updateTable(table="geocoding", id_col="_id", fun=combineEstablishmentCols, monitor=5, con=con)
+    updater.updateTable(table="geocoding", id_col="_id", fun=combineStationCols, monitor=5, con=con)
+    updater.createTable(table="locations_intersections", con=con)
     intersections = updater.getDistinctValues(table="GeoNames", column="streets_intersection")
     streets_transitions = updater.getDistinctValues(table="GeoNames", column="streets_transition")
     uid_col = "device_id"
@@ -109,33 +110,33 @@ def update(): # script to run here
     for item in place_category:
         data = dict()
         data['uid'] = updater.getAssociatedValue(table=table, col1=P1_name,
-                                                 value=item, col2=uid_col) # TODO: update to handle multiple UIDs
+                                                 value=item, col2=uid_col, con=con) # TODO: update to handle multiple UIDs
         data['P1'] = item
         data['P1_label'] = updater.getAssociatedValue(table=table, col1=P1_name,
-                                                     value=item, col2="label")
-        data['frequency'] = updater.getFrequency(table=table, columns={P1_name:item})
+                                                     value=item, col2="label", con=con)
+        data['frequency'] = updater.getFrequency(table=table, columns={P1_name:item}, con=con)
         for i in xrange(0, 24, 2):
             category = str(i) + '-' + str(i+1)
-            data[category] = updater.getFrequency(table=table, columns={P1_name:item, 'hour':[i,i+1]})
-        updater.addRow(table=newTable, data=data)
+            data[category] = updater.getFrequency(table=table, columns={P1_name:item, 'hour':[i,i+1]}, con=con)
+        updater.addRow(table=newTable, data=data, con=con)
     for item in transition_category:
         data = dict()
         data['uid'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                                 value=item, col2=uid_col) # TODO: update to handle multiple UIDs
+                                                 value=item, col2=uid_col, con=con) # TODO: update to handle multiple UIDs
         data['P1'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                               value=item, col2=P1_name)
+                                               value=item, col2=P1_name, con=con)
         data['P1_label'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                                     value=(data['P1']), col2="label")
+                                                     value=(data['P1']), col2="label", con=con)
         data['P2'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                               value=item, col2=P2_name)
+                                               value=item, col2=P2_name, con=con)
         data['P2_label'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                                     value=(data['P2']), col2="label")
-        data['frequency'] = updater.getFrequency(table=table, columns={transition_name:item})
+                                                     value=(data['P2']), col2="label", con=con)
+        data['frequency'] = updater.getFrequency(table=table, columns={transition_name:item}, con=con)
         for i in xrange(0, 24, 2):
             category = str(i) + '-' + str(i+1)
-            data[category] = updater.getFrequency(table=table, columns={transition_name:item, 'hour':[i,i+1]})
-        updater.addRow(table=newTable, data=data)
-    updater.createTable(table="locations_areas")
+            data[category] = updater.getFrequency(table=table, columns={transition_name:item, 'hour':[i,i+1]}, con=con)
+        updater.addRow(table=newTable, data=data, con=con)
+    updater.createTable(table="locations_areas", con=con)
     areas = updater.getDistinctValues(table="GeoNames", column="toponymName_places")
     areas_transitions = updater.getDistinctValues(table="GeoNames", column="toponym_transition")
     uid_col = "device_id"
@@ -147,33 +148,33 @@ def update(): # script to run here
     for item in place_category:
         data = dict()
         data['uid'] = updater.getAssociatedValue(table=table, col1=P1_name,
-                                                 value=item, col2=uid_col) # TODO: update to handle multiple UIDs
+                                                 value=item, col2=uid_col, con=con) # TODO: update to handle multiple UIDs
         data['P1'] = item
         data['P1_label'] = updater.getAssociatedValue(table=table, col1=P1_name,
-                                                     value=item, col2="label")
-        data['frequency'] = updater.getFrequency(table=table, columns={P1_name:item})
+                                                     value=item, col2="label", con=con)
+        data['frequency'] = updater.getFrequency(table=table, columns={P1_name:item}, con=con)
         for i in xrange(0, 24, 2):
             category = str(i) + '-' + str(i+1)
-            data[category] = updater.getFrequency(table=table, columns={P1_name:item, 'hour':[i,i+1]})
-        updater.addRow(table=newTable, data=data)
+            data[category] = updater.getFrequency(table=table, columns={P1_name:item, 'hour':[i,i+1]}, con=con)
+        updater.addRow(table=newTable, data=data, con=con)
     for item in transition_category:
         data = dict()
         data['uid'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                                 value=item, col2=uid_col) # TODO: update to handle multiple UIDs
+                                                 value=item, col2=uid_col, con=con) # TODO: update to handle multiple UIDs
         data['P1'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                               value=item, col2=P1_name)
+                                               value=item, col2=P1_name, con=con)
         data['P1_label'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                                     value=(data['P1']), col2="label")
+                                                     value=(data['P1']), col2="label", con=con)
         data['P2'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                               value=item, col2=P2_name)
+                                               value=item, col2=P2_name, con=con)
         data['P2_label'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                                     value=(data['P2']), col2="label")
-        data['frequency'] = updater.getFrequency(table=table, columns={transition_name:item})
+                                                     value=(data['P2']), col2="label", con=con)
+        data['frequency'] = updater.getFrequency(table=table, columns={transition_name:item}, con=con)
         for i in xrange(0, 24, 2):
             category = str(i) + '-' + str(i+1)
-            data[category] = updater.getFrequency(table=table, columns={transition_name:item, 'hour':[i,i+1]})
-        updater.addRow(table=newTable, data=data)
-    updater.createTable(table="locations_places")
+            data[category] = updater.getFrequency(table=table, columns={transition_name:item, 'hour':[i,i+1]}, con=con)
+        updater.addRow(table=newTable, data=data, con=con)
+    updater.createTable(table="locations_places", con=con)
     places = updater.getDistinctValues(table="places", column="name_1")
     places_transitions = updater.getDistinctValues(table="places", column="name_1_transition")
     uid_col = "device_id"
@@ -185,33 +186,33 @@ def update(): # script to run here
     for item in place_category:
         data = dict()
         data['uid'] = updater.getAssociatedValue(table=table, col1=P1_name,
-                                                 value=item, col2=uid_col) # TODO: update to handle multiple UIDs
+                                                 value=item, col2=uid_col, con=con) # TODO: update to handle multiple UIDs
         data['P1'] = item
         data['P1_label'] = updater.getAssociatedValue(table=table, col1=P1_name,
-                                                     value=item, col2="label")
-        data['frequency'] = updater.getFrequency(table=table, columns={P1_name:item})
+                                                     value=item, col2="label", con=con)
+        data['frequency'] = updater.getFrequency(table=table, columns={P1_name:item}, con=con)
         for i in xrange(0, 24, 2):
             category = str(i) + '-' + str(i+1)
-            data[category] = updater.getFrequency(table=table, columns={P1_name:item, 'hour':[i,i+1]})
-        updater.addRow(table=newTable, data=data)
+            data[category] = updater.getFrequency(table=table, columns={P1_name:item, 'hour':[i,i+1]}, con=con)
+        updater.addRow(table=newTable, data=data, con=con)
     for item in transition_category:
         data = dict()
         data['uid'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                                 value=item, col2=uid_col) # TODO: update to handle multiple UIDs
+                                                 value=item, col2=uid_col, con=con) # TODO: update to handle multiple UIDs
         data['P1'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                               value=item, col2=P1_name)
+                                               value=item, col2=P1_name, con=con)
         data['P1_label'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                                     value=(data['P1']), col2="label")
+                                                     value=(data['P1']), col2="label", con=con)
         data['P2'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                               value=item, col2=P2_name)
+                                               value=item, col2=P2_name, con=con)
         data['P2_label'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                                     value=(data['P2']), col2="label")
-        data['frequency'] = updater.getFrequency(table=table, columns={transition_name:item})
+                                                     value=(data['P2']), col2="label", con=con)
+        data['frequency'] = updater.getFrequency(table=table, columns={transition_name:item}, con=con)
         for i in xrange(0, 24, 2):
             category = str(i) + '-' + str(i+1)
-            data[category] = updater.getFrequency(table=table, columns={transition_name:item, 'hour':[i,i+1]})
-        updater.addRow(table=newTable, data=data)
-    updater.createTable(table="locations_street")
+            data[category] = updater.getFrequency(table=table, columns={transition_name:item, 'hour':[i,i+1]}, con=con)
+        updater.addRow(table=newTable, data=data, con=con)
+    updater.createTable(table="locations_street", con=con)
     streets = updater.getDistinctValues(table="geocoding", column="street")
     street_transitions = updater.getDistinctValues(table="geocoding", column="street_transition")
     uid_col = "device_id"
@@ -223,33 +224,33 @@ def update(): # script to run here
     for item in place_category:
         data = dict()
         data['uid'] = updater.getAssociatedValue(table=table, col1=P1_name,
-                                                 value=item, col2=uid_col) # TODO: update to handle multiple UIDs
+                                                 value=item, col2=uid_col, con=con) # TODO: update to handle multiple UIDs
         data['P1'] = item
         data['P1_label'] = updater.getAssociatedValue(table=table, col1=P1_name,
-                                                     value=item, col2="label")
-        data['frequency'] = updater.getFrequency(table=table, columns={P1_name:item})
+                                                     value=item, col2="label", con=con)
+        data['frequency'] = updater.getFrequency(table=table, columns={P1_name:item}, con=con)
         for i in xrange(0, 24, 2):
             category = str(i) + '-' + str(i+1)
-            data[category] = updater.getFrequency(table=table, columns={P1_name:item, 'hour':[i,i+1]})
-        updater.addRow(table=newTable, data=data)
+            data[category] = updater.getFrequency(table=table, columns={P1_name:item, 'hour':[i,i+1]}, con=con)
+        updater.addRow(table=newTable, data=data, con=con)
     for item in transition_category:
         data = dict()
         data['uid'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                                 value=item, col2=uid_col) # TODO: update to handle multiple UIDs
+                                                 value=item, col2=uid_col, con=con) # TODO: update to handle multiple UIDs
         data['P1'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                               value=item, col2=P1_name)
+                                               value=item, col2=P1_name, con=con)
         data['P1_label'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                                     value=(data['P1']), col2="label")
+                                                     value=(data['P1']), col2="label", con=con)
         data['P2'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                               value=item, col2=P2_name)
+                                               value=item, col2=P2_name, con=con)
         data['P2_label'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                                     value=(data['P2']), col2="label")
-        data['frequency'] = updater.getFrequency(table=table, columns={transition_name:item})
+                                                     value=(data['P2']), col2="label", con=con)
+        data['frequency'] = updater.getFrequency(table=table, columns={transition_name:item}, con=con)
         for i in xrange(0, 24, 2):
             category = str(i) + '-' + str(i+1)
-            data[category] = updater.getFrequency(table=table, columns={transition_name:item, 'hour':[i,i+1]})
-        updater.addRow(table=newTable, data=data)
-    updater.createTable(table="locations_establishment")
+            data[category] = updater.getFrequency(table=table, columns={transition_name:item, 'hour':[i,i+1]}, con=con)
+        updater.addRow(table=newTable, data=data, con=con)
+    updater.createTable(table="locations_establishment", con=con)
     establishments = updater.getDistinctValues(table="geocoding", column="establishment")
     establishment_transitions = updater.getDistinctValues(table="geocoding", column="establishment_transition")
     uid_col = "device_id"
@@ -261,33 +262,33 @@ def update(): # script to run here
     for item in place_category:
         data = dict()
         data['uid'] = updater.getAssociatedValue(table=table, col1=P1_name,
-                                                 value=item, col2=uid_col) # TODO: update to handle multiple UIDs
+                                                 value=item, col2=uid_col, con=con) # TODO: update to handle multiple UIDs
         data['P1'] = item
         data['P1_label'] = updater.getAssociatedValue(table=table, col1=P1_name,
-                                                     value=item, col2="label")
-        data['frequency'] = updater.getFrequency(table=table, columns={P1_name:item})
+                                                     value=item, col2="label", con=con)
+        data['frequency'] = updater.getFrequency(table=table, columns={P1_name:item}, con=con)
         for i in xrange(0, 24, 2):
             category = str(i) + '-' + str(i+1)
-            data[category] = updater.getFrequency(table=table, columns={P1_name:item, 'hour':[i,i+1]})
-        updater.addRow(table=newTable, data=data)
+            data[category] = updater.getFrequency(table=table, columns={P1_name:item, 'hour':[i,i+1]}, con=con)
+        updater.addRow(table=newTable, data=data, con=con)
     for item in transition_category:
         data = dict()
         data['uid'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                                 value=item, col2=uid_col) # TODO: update to handle multiple UIDs
+                                                 value=item, col2=uid_col, con=con) # TODO: update to handle multiple UIDs
         data['P1'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                               value=item, col2=P1_name)
+                                               value=item, col2=P1_name, con=con)
         data['P1_label'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                                     value=(data['P1']), col2="label")
+                                                     value=(data['P1']), col2="label", con=con)
         data['P2'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                               value=item, col2=P2_name)
+                                               value=item, col2=P2_name, con=con)
         data['P2_label'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                                     value=(data['P2']), col2="label")
-        data['frequency'] = updater.getFrequency(table=table, columns={transition_name:item})
+                                                     value=(data['P2']), col2="label", con=con)
+        data['frequency'] = updater.getFrequency(table=table, columns={transition_name:item}, con=con)
         for i in xrange(0, 24, 2):
             category = str(i) + '-' + str(i+1)
-            data[category] = updater.getFrequency(table=table, columns={transition_name:item, 'hour':[i,i+1]})
-        updater.addRow(table=newTable, data=data)
-    updater.createTable(table="locations_station")
+            data[category] = updater.getFrequency(table=table, columns={transition_name:item, 'hour':[i,i+1]}, con=con)
+        updater.addRow(table=newTable, data=data, con=con)
+    updater.createTable(table="locations_station", con=con)
     stations = updater.getDistinctValues(table="geocoding", column="bus_station")
     station_transitions = updater.getDistinctValues(table="geocoding", column="bus_station_transition")
     uid_col = "device_id"
@@ -299,31 +300,31 @@ def update(): # script to run here
     for item in place_category:
         data = dict()
         data['uid'] = updater.getAssociatedValue(table=table, col1=P1_name,
-                                                 value=item, col2=uid_col) # TODO: update to handle multiple UIDs
+                                                 value=item, col2=uid_col, con=con) # TODO: update to handle multiple UIDs
         data['P1'] = item
         data['P1_label'] = updater.getAssociatedValue(table=table, col1=P1_name,
-                                                     value=item, col2="label")
-        data['frequency'] = updater.getFrequency(table=table, columns={P1_name:item})
+                                                     value=item, col2="label", con=con)
+        data['frequency'] = updater.getFrequency(table=table, columns={P1_name:item}, con=con)
         for i in xrange(0, 24, 2):
             category = str(i) + '-' + str(i+1)
-            data[category] = updater.getFrequency(table=table, columns={P1_name:item, 'hour':[i,i+1]})
-        updater.addRow(table=newTable, data=data)
+            data[category] = updater.getFrequency(table=table, columns={P1_name:item, 'hour':[i,i+1]}, con=con)
+        updater.addRow(table=newTable, data=data, con=con)
     for item in transition_category:
         data = dict()
         data['uid'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                                 value=item, col2=uid_col) # TODO: update to handle multiple UIDs
+                                                 value=item, col2=uid_col, con=con) # TODO: update to handle multiple UIDs
         data['P1'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                               value=item, col2=P1_name)
+                                               value=item, col2=P1_name, con=con)
         data['P1_label'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                                     value=(data['P1']), col2="label")
+                                                     value=(data['P1']), col2="label", con=con)
         data['P2'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                               value=item, col2=P2_name)
+                                               value=item, col2=P2_name, con=con)
         data['P2_label'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                                     value=(data['P2']), col2="label")
-        data['frequency'] = updater.getFrequency(table=table, columns={transition_name:item})
+                                                     value=(data['P2']), col2="label", con=con)
+        data['frequency'] = updater.getFrequency(table=table, columns={transition_name:item}, con=con)
         for i in xrange(0, 24, 2):
             category = str(i) + '-' + str(i+1)
-            data[category] = updater.getFrequency(table=table, columns={transition_name:item, 'hour':[i,i+1]})
-        updater.addRow(table=newTable, data=data)
+            data[category] = updater.getFrequency(table=table, columns={transition_name:item, 'hour':[i,i+1]}, con=con)
+        updater.addRow(table=newTable, data=data, con=con)
 
 update()

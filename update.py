@@ -22,8 +22,15 @@ from math import radians, cos, sin, asin, sqrt
 class StatusException(Exception): # Raised when results aren't returned
     pass
 
-class InputException(Exception): # Raised for improper command line inputs
+class InputException(Exception): # Raised for improper (typically command line) inputs
     pass
+
+class Updater(object):
+    def __init__(self, **kwargs):
+        self.database = kwargs.get('database', "locations.db")
+        self.table = kwargs.get('table', "locations")
+        self.keys = kwargs.get('keys', dict())
+
 
 def haversine(lat1, lon1, lat2, lon2):
     """Calculate distance between two lat/lon points"""
