@@ -343,7 +343,7 @@ class Updater(object):
                 itemDict = self.rowAsDict(item, columns)
                 data = fun(itemDict)
                 if (monitor != 0 and ID%monitor == 0):
-                    print "Updating index", ID, "of table", table, "using", str(fun)
+                    print "Updating index", ID, "of table", table, "using", str(fun.__name__)
                 self.updateRow(data, table, id_col, ID, con=con)
             if conCreated: 
                 try: 

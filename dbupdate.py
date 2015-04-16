@@ -58,16 +58,16 @@ def getTransition(item, database, table, columnOfInterest, jump=1, maxJump=5):
 
 def combineCols(item, newCol=None, reorder=False, *cols):
     if newCol is None:
-    	newCol = cols[0]
-    	for i in xrange(1, len(cols)):
-    		newCol += "/" + cols[i]
+        newCol = cols[0]
+        for i in xrange(1, len(cols)):
+            newCol += "/" + cols[i]
     result, newValue = dict(), []
     for col in cols:
-    	if col not in item or item[col] is None:
-    		return result
-    	newValue += str(item[col])
+        if col not in item or item[col] is None:
+            return result
+        newValue += str(item[col])
     if reorder:
-    	newValue.sort()
+        newValue.sort()
     newValue = ",".join(newValue)
     if newValue == "": newValue = None
     result[newCol] = newValue
@@ -153,34 +153,34 @@ def geocodingProcessor(inputs, error=False):
     return inputs
 
 def geoNamesIntersectionInterpreter(call):
-	return call['geonames'][0]
+    return call['geonames'][0]
 
 def geoNamesPlacesInterpreter(call):
-	call = call['intersection']
-	street1, street2 = call['street1'], call['street2']
-	if street1 > street2:
-		street1, street2 = street2, street1
-	streets = street1 + "at" + street2
-	call['streets'] = streets
-	return call
+    call = call['intersection']
+    street1, street2 = call['street1'], call['street2']
+    if street1 > street2:
+        street1, street2 = street2, street1
+    streets = street1 + "at" + street2
+    call['streets'] = streets
+    return call
 
 def placesInterpreter(call, numPlaces=5):
-	call = JSONObject['results']
-	for i in xrange(1, numPlaces + 1):
-		data["name_" + str(i)] = call[i]['name']
-		data["type_" + str(i)] = call[i]['types'][0]
-	return call
+    call = JSONObject['results']
+    for i in xrange(1, numPlaces + 1):
+        data["name_" + str(i)] = call[i]['name']
+        data["type_" + str(i)] = call[i]['types'][0]
+    return call
 
 def geocodingInterpreter(call):
-	data = dict()
-	for item in call['results']:
-		address = item['address_components']
-		for loc in address:
-			locType = loc['types'][0]
-			if locType not in data:
-				name = loc['short_name']
-				data[locType] = name
-	return data
+    data = dict()
+    for item in call['results']:
+        address = item['address_components']
+        for loc in address:
+            locType = loc['types'][0]
+            if locType not in data:
+                name = loc['short_name']
+                data[locType] = name
+    return data
 
 # FUNCTIONS TO CREATE WRAPPER FUNCTIONS
 
@@ -191,7 +191,7 @@ def getTransitionGenerator(database, table, columnOfInterest):
 
 def combineColsGenerator(newCol, reorder=False, *cols):
     def colCombiner(item):
-        return combineCols(item=item, newCol=newCol, reorder=reorder, *cols)
+        return combineCols(item, newCol, reorder, *cols)
     return colCombiner
 
 def serviceDataGenerator(service):
@@ -248,31 +248,31 @@ def update(): # script to run here (FULL PIPELINE)
     geocodingTranslator['political'] = "city"
 
     geoNamesIntersection = Service(name="GeoNames Intersection", 
-    	                           URL="http://api.geonames.org/findNearestIntersectionJSON?",
-    	                           required=['lat', 'lng'], keys=gNamesKeys,
-    	                           confirm=["intersection"], tries=10, skips=10,
-    	                           connects=10, interpreteter=geoNamesIntersectionInterpreter,
-    	                           processor=geoNamesProcessor, append="_intersection",
-    	                           key_id="username")
+                                   URL="http://api.geonames.org/findNearestIntersectionJSON?",
+                                   required=['lat', 'lng'], keys=gNamesKeys,
+                                   confirm=["intersection"], tries=10, skips=10,
+                                   connects=10, interpreteter=geoNamesIntersectionInterpreter,
+                                   processor=geoNamesProcessor, append="_intersection",
+                                   key_id="username")
 
     geoNamesPlaces = Service(name="GeoNames Places",
-    	                     URL="http://api.geonames.org/findNearbyPlaceNameJSON?",
-    	                     required=['lat', 'lng'], keys=gNamesKeys,
-    	                     confirm=["geonames"], tries=10, skips=10, connects=10,
-    	                     interpreter=geoNamesPlacesInterpreter, processor=geoNamesProcessor,
-    	                     append="_places", key_id="username")
+                             URL="http://api.geonames.org/findNearbyPlaceNameJSON?",
+                             required=['lat', 'lng'], keys=gNamesKeys,
+                             confirm=["geonames"], tries=10, skips=10, connects=10,
+                             interpreter=geoNamesPlacesInterpreter, processor=geoNamesProcessor,
+                             append="_places", key_id="username")
 
     googlePlaces = Service(name="Google Places", 
-    	                   URL="https://maps.googleapis.com/maps/api/place/nearbysearch/json?",
-    	                   required=['location'], keys=googleKeys, confirm={'status':"OK"},
-    	                   tries=10, skips=10, connects=10, intepreter=placesInterpreter,
-    	                   processor=placesProcessor)
+                           URL="https://maps.googleapis.com/maps/api/place/nearbysearch/json?",
+                           required=['location'], keys=googleKeys, confirm={'status':"OK"},
+                           tries=10, skips=10, connects=10, intepreter=placesInterpreter,
+                           processor=placesProcessor)
 
     googleGeocoding = Service(name="Google Geocoding",
-    	                      URL="https://maps.googleapis.com/maps/api/geocode/json?",
-    	                      required=['latlng'], keys=(googleKeys + [None]),
-    	                      confirm={'status':"OK"}, tries=10, skips=10, connects=10,
-    	                      interpreter=geocodingInterpreter, processor=geocodingProcessor)
+                              URL="https://maps.googleapis.com/maps/api/geocode/json?",
+                              required=['latlng'], keys=(googleKeys + [None]),
+                              confirm={'status':"OK"}, tries=10, skips=10, connects=10,
+                              interpreter=geocodingInterpreter, processor=geocodingProcessor)
 
     updater.UpdateTable(table="GeoNames", id_col="_id", fun=serviceDataGenerator(geoNamesIntersection), monitor=5, con=con)
     updater.UpdateTable(table="GeoNames", id_col="_id", fun=serviceDataGenerator(geoNamesPlaces), monitor=5, con=con)
@@ -282,10 +282,10 @@ def update(): # script to run here (FULL PIPELINE)
     # ADD DISTANCE TO EACH PLACE IN "places"
     numPlaces = 5
     for i in xrange(1, numPlaces+1):
-    	updater.updateTable(table="places", id_col="_id", fun=haversineGenerator(i), monitor=5, con=con)
+        updater.updateTable(table="places", id_col="_id", fun=haversineGenerator(i), monitor=5, con=con)
 
     updater.updateTable(table="places", id_col="_id", fun=combineColsGenerator("names_all", True, "name_1", "name_2", "name_3", 
-    																		   "name_4", "name_5"), monitor=5, con=con)
+                                                                               "name_4", "name_5"), monitor=5, con=con)
 
     updater.updateTable(table="GeoNames", id_col="_id", fun=getTransitionGenerator("locations.db", "GeoNames", "streets_intersection"), 
                         monitor=5, con=con)
@@ -354,4 +354,4 @@ def update(): # script to run here (FULL PIPELINE)
 args = sys.argv[1:]
 
 if len(args) == 0:
-	update() # RUN FULL PIPELINE
+    update() # RUN FULL PIPELINE
