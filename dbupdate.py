@@ -337,4 +337,9 @@ def update(): # script to run here (FULL PIPELINE)
 
         con.close()
 
-update()
+# COMMAND LINE INTERFACE
+
+args = sys.argv[1:]
+
+if len(args) == 0:
+	update() # RUN FULL PIPELINE
