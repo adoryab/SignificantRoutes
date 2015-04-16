@@ -47,10 +47,15 @@ class Updater(object):
         if conCreated: con.close() # avoids wasting processing power
         return [item[0] for item in fetch]
 
-    def tableExists(self, table):
+    def tableExists(self, table, con=None):
         """Checks whether a table exists in a database"""
 
-        return (table in self.getTables())
+        conCreated = False
+        if(con is None):
+            con, conCreated = self.getConnection(), True
+        result = (table in self.getTables(con=con))
+        if conCreated: con.close()
+        return result
 
     def getColumns(self, table, error=False, con=None):
         """Lists all columns within a table
@@ -64,7 +69,7 @@ class Updater(object):
         (recommended for situations where connection will be
         used after this function call terminates)"""
 
-        if self.tableExists(table):
+        if self.tableExists(table, con=con):
             conCreated = False
             if con is None:
                 con, conCreated = self.getConnection(), True
@@ -78,12 +83,17 @@ class Updater(object):
             raise IOError("Table does not exist")
         else: return []
 
-    def columnExists(self, table, column):
+    def columnExists(self, table, column, con=None):
         """Checks whether a column exists in a table"""
 
-        if (not self.tableExists(table)):
+        conCreated = False
+        if(con is None):
+            con, conCreated = self.getConnection(), True
+        if (not self.tableExists(table, con=con)):
             raise IOError("Invalid table!")
-        return (column in self.getColumns(table))
+        result = (column in self.getColumns(table, con=con))
+        if conCreated: con.close()
+        return result
 
     def getColumnsForRow(self, table, id_col, ID, error=False, con=None):
         """Lists all columns within a table that exist for a row
@@ -113,11 +123,16 @@ class Updater(object):
             con.close()
         return presentCols
 
-    def getIndex(self, table, column, error=True):
+    def getIndex(self, table, column, error=True, con=None):
         """Returns index of column in a table"""
         
-        if self.columnExists(table, column):
-            return self.getColumns(table).index(column)
+        conCreated = False
+        if (con is None):
+            con, conCreated = self.getConnection(), True
+        if self.columnExists(table, column, con=con):
+            result = self.getColumns(table, con=con).index(column)
+            if conCreated: con.close()
+            return result
         elif error:
             raise IOError("Column does not exist!")
 
@@ -133,9 +148,9 @@ class Updater(object):
         error (if set to True, raises error if column exists)
         con: existing connection (defaults to None)"""
         
-        if (not self.tableExists(table)):
+        if (not self.tableExists(table, con=con)):
             raise IOError("Invalid table!")
-        if (not self.columnExists(table, column)):
+        if (not self.columnExists(table, column, con=con)):
             conCreated = False
             if con is None: 
                 con, conCreated = self.getConnection(), True
@@ -159,7 +174,7 @@ class Updater(object):
         error: if set to True, raises error if table exists
         con: pre-existing sqlite connection"""
         
-        if (not self.tableExists(table)):
+        if (not self.tableExists(table, con=con)):
             conCreated = False
             if con is None:
                 con, conCreated = self.getConnection(), True
@@ -186,7 +201,7 @@ class Updater(object):
         OPTIONAL
         con: existing sqlite connection"""
         
-        if (not self.tableExists(table)):
+        if (not self.tableExists(table, con=con)):
             raise IOError("Invalid table!")
         conCreated = False
         if (con is None): 
@@ -222,12 +237,12 @@ class Updater(object):
         con: pre-existing connection
         monitor: if set to non-zero, prints status on command line every (print)th index"""
 
-        if (not self.tableExists(table)): 
-            raise IOError("Invalid table!")
-        conCreated = False
-        id_index = self.getIndex(table, id_col)
         if (con is None):
             con, conCreated = self.getConnection(), True
+        if (not self.tableExists(table, con=con)): 
+            raise IOError("Invalid table!")
+        conCreated = False
+        id_index = self.getIndex(table, id_col, con=con)
         with con:
             cur = con.cursor()
             if minIndex != None:
@@ -263,9 +278,9 @@ class Updater(object):
         id_col: name of ID column (default _id)
         id_index: index of ID column (default 0)"""
 
-        if (not self.tableExists(table)):
+        if (not self.tableExists(table, con=con)):
             raise IOError("Invalid table!")
-        if (not self.columnExists(table, column)): 
+        if (not self.columnExists(table, column, con=con)): 
             raise IOError("Invalid column!")
         conCreated = False
         if (con is None):
@@ -288,9 +303,9 @@ class Updater(object):
         OPTIONAL
         con: pre-existing sqlite connection"""
 
-        if (not self.tableExists(table)):
+        if (not self.tableExists(table, con=con)):
             raise IOError("Invalid table!")
-        if (not self.columnExists(table, column)): 
+        if (not self.columnExists(table, column, con=con)): 
             raise IOError("Invalid column!")
         conCreated = False
         if (con is None):
@@ -314,9 +329,9 @@ class Updater(object):
         id_index: location of id column (default 0)
         con: pre-existing sqlite connection"""
 
-        if (not self.tableExists(table)):
+        if (not self.tableExists(table, con=con)):
             raise IOError("Invalid table!")
-        if (not self.columnExists(table, column)): 
+        if (not self.columnExists(table, column, con=con)): 
             raise IOError("Invalid column!")
         conCreated = False
         if (con is None):
@@ -372,9 +387,9 @@ class Updater(object):
         id_col: id column in table (default _id)
         id_index: location of id column (default 0)
         con: pre-existing sqlite connection"""
-        if (not self.tableExists(table)):
+        if (not self.tableExists(table, con=con)):
             raise IOError("Invalid table!")
-        if (not self.columnExists(table, col1) or not self.columnExists(table, col2)): 
+        if (not self.columnExists(table, col1, con=con) or not self.columnExists(table, col2, con=con)): 
             raise IOError("Invalid column!")
         conCreated = False
         if (con is None):
