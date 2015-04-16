@@ -162,7 +162,7 @@ class Updater(object):
         elif error:
             raise IOError("Column already exists!")
 
-    def createTable(self, table, primaryKey=True, error=False,
+    def createTable(self, table, primaryKey="_id", error=False,
                     con=None):
         """Creates a new table in the database
         PARAMETERS
@@ -170,7 +170,7 @@ class Updater(object):
 
         OPTIONAL:
         key: whether or not to generate a primary key
-        (defaults to True)
+        (name of primary key field to generate- defaults to _id)
         error: if set to True, raises error if table exists
         con: pre-existing sqlite connection"""
         
@@ -181,8 +181,9 @@ class Updater(object):
             with con:
                 cur = con.cursor()
                 statement = "CREATE TABLE {tn}".format(tn=table)
-                if primaryKey: 
-                    statement +=  " (_id integer primary key autoincrement)"
+                if primaryKey != "": 
+                    statement +=  " ({pk} integer primary key autoincrement)"\
+                                   .format(pk=primaryKey)
                 cur.execute(statement)
             if conCreated: con.close()
         elif error:
@@ -265,7 +266,7 @@ class Updater(object):
                 self.updateRow(data, table, id_col, ID, con=con)
             if conCreated: con.close()
 
-    def getRows(self, table, column, col_value, id_col="_id", id_index=0, con=None):
+    def getRows(self, table, column, col_value, id_col="_id", con=None):
         """Gets rows matching certain criteria
 
         PARAMETERS
@@ -275,16 +276,16 @@ class Updater(object):
 
         OPTIONAL
         con: pre-existing sqlite connection
-        id_col: name of ID column (default _id)
-        id_index: index of ID column (default 0)"""
+        id_col: name of ID column (default _id)"""
 
+        conCreated = False
+        if (con is None):
+            con, conCreated = self.getConnection(), True
         if (not self.tableExists(table, con=con)):
             raise IOError("Invalid table!")
         if (not self.columnExists(table, column, con=con)): 
             raise IOError("Invalid column!")
-        conCreated = False
-        if (con is None):
-            con, conCreated = self.getConnection(), True
+        id_index = self.getIndex(table, id_col, con=con)
         with con:
             cur = con.cursor()
             cur.execute("SELECT * FROM {tn} WHERE {cn} = {cv}"\
@@ -293,7 +294,7 @@ class Updater(object):
         if conCreated: con.close()
         return [self.rowAsDict(item, self.getColumnsForRow(table, id_col, item[id_index])) for item in fetch]
 
-    def getDistinctValues(self, table, column, con=None):
+    def getDistinctValues(self, table, column, conditions=dict(), con=None):
         """Gets distinct values in a column
 
         PARAMETERS
@@ -301,6 +302,7 @@ class Updater(object):
         column: column to check
 
         OPTIONAL
+        conditions: dictionary of requirements in other columns
         con: pre-existing sqlite connection"""
 
         if (not self.tableExists(table, con=con)):
@@ -310,14 +312,30 @@ class Updater(object):
         conCreated = False
         if (con is None):
             con, conCreated = self.getConnection(), True
+        statement = "SELECT DISTINCT " + column + " FROM " + table
+        if (len(conditions) != 0):
+            statement += " WHERE "
+            firstRequirement = True
+            for item in conditions:
+                if (not firstRequirement):
+                    statement += " AND "
+                requirement = conditions[item]
+                if (type(requirement) == list):
+                    firstIteration = True
+                    for value in requirement:
+                        if (not firstIteration):
+                            statement += " OR "
+                        statement += str(item) + " = " + str(value)
+                else:
+                    statement += str(item) + " = " + str(requirement)
         with con:
             cur = con.cursor()
-            cur.execute("SELECT DISTINCT {cn} FROM {tn}".format(cn=column, tn=table))
+            cur.execute(statement)
         fetch = cur.fetchall()
         if conCreated: con.close()
         return [item[0] for item in fetch]
 
-    def getIntersectingValues(self, table, columns, id_col="_id", id_index=0, con=None):
+    def getIntersectingValues(self, table, columns, id_col="_id", con=None):
         """Gets values that meet all criteria
 
         PARAMETERS
@@ -326,16 +344,16 @@ class Updater(object):
 
         OPTIONAL
         id_col: id column in table (default _id)
-        id_index: location of id column (default 0)
         con: pre-existing sqlite connection"""
 
+        conCreated = False
+        if (con is None):
+            con, conCreated = self.getConnection(), True
         if (not self.tableExists(table, con=con)):
             raise IOError("Invalid table!")
         if (not self.columnExists(table, column, con=con)): 
             raise IOError("Invalid column!")
-        conCreated = False
-        if (con is None):
-            con, conCreated = self.getConnection(), True
+        id_index = self.getIndex(table, id_col, con=con)
         statement = "SELECT * FROM " + str(table)
         if len(columns) > 0:
             statement +=  " WHERE "
@@ -362,7 +380,7 @@ class Updater(object):
             con.close()
         return [self.rowAsDict(item, self.getColumnsForRow(table, id_col, item[id_index])) for item in fetch]
 
-    def getFrequency(self, table, columns, con=None):
+    def getFrequency(self, table, columns, id_col="_id", con=None):
         """Gets number of occurrences that meet certain criteria
 
         PARAMETERS
@@ -372,9 +390,9 @@ class Updater(object):
         OPTIONAL
         con: pre-existing sqlite connection"""
 
-        return len(self.getIntersectingValues(table, columns, con))
+        return len(self.getIntersectingValues(table, columns, id_col, con))
 
-    def getAssociatedValue(self, table, col1, value, col2, id_col="_id", id_index=0, con=None):
+    def getAssociatedValue(self, table, col1, value, col2, id_col="_id", con=None):
         """Gets value from col2 associated with value from col1
 
         PARAMETERS
@@ -387,13 +405,15 @@ class Updater(object):
         id_col: id column in table (default _id)
         id_index: location of id column (default 0)
         con: pre-existing sqlite connection"""
+
+        conCreated = False
+        if (con is None):
+            con, conCreated = self.getConnection(), True
         if (not self.tableExists(table, con=con)):
             raise IOError("Invalid table!")
         if (not self.columnExists(table, col1, con=con) or not self.columnExists(table, col2, con=con)): 
             raise IOError("Invalid column!")
-        conCreated = False
-        if (con is None):
-            con, conCreated = self.getConnection(), True
+        id_index = self.getIndex(table, id_col, con=con)
         cur = con.cursor()
         cur.execute("SELECT * FROM {tn} WHERE {cn} = {cv}".format(tn=table, cn=col1, cv=value))
         item = cur.fetchone()
