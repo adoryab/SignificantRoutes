@@ -5,6 +5,7 @@
 # @TODO:
 # ADD COMMAND LINE INTERFACE
 
+import sys
 from services import Service
 from updater import Updater
 from datetime import datetime
@@ -55,13 +56,21 @@ def getTransition(item, database, table, columnOfInterest, jump=1, maxJump=5):
             result[str(columnOfInterest) + "_next"] = nextValue
     return result
 
-def combineCols(item, col1, col2, newCol=None):
+def combineCols(item, newCol=None, reorder=False, *cols):
     if newCol is None:
-        newCol = col1 + "/" + col2
-    result = dict()
-    if ((col1 not in item or item[col1] is None) or (col2 not in item or item[col2] is None)):
-        return result
-    result[newCol] = str(item[col1] + "," + item[col2])
+    	newCol = cols[0]
+    	for i in xrange(1, len(cols)):
+    		newCol += "/" + cols[i]
+    result, newValue = dict(), []
+    for col in cols:
+    	if col not in item or item[col] is None:
+    		return result
+    	newValue += str(item[col])
+    if reorder:
+    	newValue.sort()
+    newValue = ",".join(newValue)
+    if newValue == "": newValue = None
+    result[newCol] = newValue
     return result
 
 def getDataFromService(item, service):
@@ -180,9 +189,9 @@ def getTransitionGenerator(database, table, columnOfInterest):
         return getTransition(item=item, database=database, table=table, columnOfInterest=columnOfInterest)
     return transitionGetter
 
-def combineColsGenerator(col1, col2, newCol):
+def combineColsGenerator(newCol, reorder=False, *cols):
     def colCombiner(item):
-        return combineCols(item=item, col1=col1, col2=col2, newCol=newCol)
+        return combineCols(item=item, newCol=newCol, reorder=reorder, *cols)
     return colCombiner
 
 def serviceDataGenerator(service):
@@ -275,6 +284,9 @@ def update(): # script to run here (FULL PIPELINE)
     for i in xrange(1, numPlaces+1):
     	updater.updateTable(table="places", id_col="_id", fun=haversineGenerator(i), monitor=5, con=con)
 
+    updater.updateTable(table="places", id_col="_id", fun=combineColsGenerator("names_all", True, "name_1", "name_2", "name_3", 
+    																		   "name_4", "name_5"), monitor=5, con=con)
+
     updater.updateTable(table="GeoNames", id_col="_id", fun=getTransitionGenerator("locations.db", "GeoNames", "streets_intersection"), 
                         monitor=5, con=con)
     updater.updateTable(table="GeoNames", id_col="_id", fun=getTransitionGenerator("locations.db", "GeoNames", "toponymName_places"),
@@ -289,22 +301,22 @@ def update(): # script to run here (FULL PIPELINE)
                         monitor=5, con=con)
     
     updater.updateTable(table="GeoNames", id_col="_id", 
-                        fun=combineColsGenerator("streets_intersection", "streets_intersection_next", "streets_transition"), 
+                        fun=combineColsGenerator("streets_transition", False, "streets_intersection", "streets_intersection_next"), 
                         monitor=5, con=con)
     updater.updateTable(table="GeoNames", id_col="_id",
-                        fun=combineColsGenerator("toponymName_places", "toponymName_places_next", "toponym_transition"), 
+                        fun=combineColsGenerator("toponym_transition", False, "toponymName_places", "toponymName_places_next"), 
                         monitor=5, con=con)
     updater.updateTable(table="places", id_col="_id",
-                        fun=combineColsGenerator("name_1", "name_1_next", "name_1_transition"), 
+                        fun=combineColsGenerator("name_1_transition", False, "name_1", "name_1_next"), 
                         monitor=5, con=con)
     updater.updateTable(table="geocoding", id_col="_id", 
-                        fun=combineColsGenerator("street", "street_next", "street_transition"),
+                        fun=combineColsGenerator("street_transition", False, "street", "street_next"),
                         monitor=5, con=con)
     updater.updateTable(table="geocoding", id_col="_id", 
-                        fun=combineColsGenerator("establishment", "establishment_next", "establishment_transition"), 
+                        fun=combineColsGenerator("establishment_transition", False, "establishment", "establishment_next"), 
                         monitor=5, con=con)
     updater.updateTable(table="geocoding", id_col="_id", 
-                        fun=combineColsGenerator("bus_station", "bus_station_transition", "bus_station_next"), 
+                        fun=combineColsGenerator("bus_station_transition", False, "bus_station", "bus_station_next"), 
                         monitor=5, con=con)
     
     tables = ["locations_intersections", "locations_areas", "locations_places", "locations_street",
