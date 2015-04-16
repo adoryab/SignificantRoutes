@@ -15,6 +15,8 @@ def pathExists(path):
 # CLASSES
 
 class Updater(object):
+    """Module to interface with a SQLite database for update purposes"""
+
     def __init__(self, database):
         """Constructor for Updater class
 
@@ -44,7 +46,11 @@ class Updater(object):
         cur, tables = con.cursor(), []
         cur.execute("SELECT name from sqlite_master WHERE type='table'")
         fetch = cur.fetchall()
-        if conCreated: con.close() # avoids wasting processing power
+        if conCreated: 
+            try: 
+                con.close()
+            except: 
+                pass
         return [item[0] for item in fetch]
 
     def tableExists(self, table, con=None):
@@ -54,7 +60,11 @@ class Updater(object):
         if(con is None):
             con, conCreated = self.getConnection(), True
         result = (table in self.getTables(con=con))
-        if conCreated: con.close()
+        if conCreated: 
+            try: 
+                con.close()
+            except: 
+                pass
         return result
 
     def getColumns(self, table, error=False, con=None):
@@ -69,15 +79,19 @@ class Updater(object):
         (recommended for situations where connection will be
         used after this function call terminates)"""
 
+        conCreated = False
+        if con is None:
+            con, conCreated = self.getConnection(), True
         if self.tableExists(table, con=con):
-            conCreated = False
-            if con is None:
-                con, conCreated = self.getConnection(), True
             cur, columns, nameIndex = con.cursor(), [], 1
             # nameIndex = index with column names
             cur.execute("PRAGMA table_info({tn})".format(tn=table))
             fetch = cur.fetchall()
-            if conCreated: con.close()
+            if conCreated: 
+                try: 
+                    con.close()
+                except: 
+                    pass
             return [item[nameIndex] for item in fetch]
         elif error:
             raise IOError("Table does not exist")
@@ -92,7 +106,11 @@ class Updater(object):
         if (not self.tableExists(table, con=con)):
             raise IOError("Invalid table!")
         result = (column in self.getColumns(table, con=con))
-        if conCreated: con.close()
+        if conCreated: 
+            try: 
+                con.close()
+            except: 
+                pass
         return result
 
     def getColumnsForRow(self, table, id_col, ID, error=False, con=None):
@@ -119,8 +137,11 @@ class Updater(object):
                             .format(tn=table, idc=id_col, id=ID, cn=column))
                 if len(cur.fetchall()) > 0:
                     presentCols.append(column)
-        if conCreated:
-            con.close()
+        if conCreated: 
+            try: 
+                con.close()
+            except: 
+                pass
         return presentCols
 
     def getIndex(self, table, column, error=True, con=None):
@@ -131,7 +152,11 @@ class Updater(object):
             con, conCreated = self.getConnection(), True
         if self.columnExists(table, column, con=con):
             result = self.getColumns(table, con=con).index(column)
-            if conCreated: con.close()
+            if conCreated: 
+                try: 
+                    con.close()
+                except: 
+                    pass
             return result
         elif error:
             raise IOError("Column does not exist!")
@@ -148,36 +173,42 @@ class Updater(object):
         error (if set to True, raises error if column exists)
         con: existing connection (defaults to None)"""
         
+        conCreated = False
+        if con is None: 
+            con, conCreated = self.getConnection(), True
         if (not self.tableExists(table, con=con)):
             raise IOError("Invalid table!")
         if (not self.columnExists(table, column, con=con)):
-            conCreated = False
-            if con is None: 
-                con, conCreated = self.getConnection(), True
             with con:
                 cur = con.cursor()
                 cur.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct}"\
                             .format(tn=table, cn=column, ct=colType))
-            if conCreated: con.close()
+            if conCreated: 
+                try: 
+                    con.close()
+                except: 
+                    pass
         elif error:
             raise IOError("Column already exists!")
 
-    def createTable(self, table, primaryKey="_id", error=False,
-                    con=None):
+    def createTable(self, table, primaryKey="_id", original=None, 
+                    error=False, con=None):
         """Creates a new table in the database
+        
         PARAMETERS
         table: name of table to be created
 
-        OPTIONAL:
-        key: whether or not to generate a primary key
+        OPTIONAL
+        primaryKey: to generate a primary key
         (name of primary key field to generate- defaults to _id)
+        original: another table from which to construct a copy
         error: if set to True, raises error if table exists
         con: pre-existing sqlite connection"""
         
+        conCreated = False
+        if con is None:
+            con, conCreated = self.getConnection(), True
         if (not self.tableExists(table, con=con)):
-            conCreated = False
-            if con is None:
-                con, conCreated = self.getConnection(), True
             with con:
                 cur = con.cursor()
                 statement = "CREATE TABLE {tn}".format(tn=table)
@@ -185,9 +216,55 @@ class Updater(object):
                     statement +=  " ({pk} integer primary key autoincrement)"\
                                    .format(pk=primaryKey)
                 cur.execute(statement)
-            if conCreated: con.close()
+            if conCreated: 
+                try: 
+                    con.close()
+                except: 
+                    pass
         elif error:
             raise IOError("Table already exists!")
+
+    def copyTable(self, newTable, originalTable, foundError=False, 
+                  notFoundError=True, con=None, copyContents=True):
+        """Create a new table in the database
+        based on an existing table
+        
+        PARAMETERS
+        newTable: name of table to be created
+        originalTable: name of original table
+
+        OPTIONAL:
+        foundError: if set to True, raises error if newTable exists
+        notFoundError: if set to True, raises error if originalTable doesn't exist
+        (defaults to True)
+        con: pre-existing sqlite connection
+        copyContents: if set to True, new table copies contents of original
+        (defaults to True)"""
+
+        conCreated = False
+        if con is None:
+            con, conCreated = self.getConnection(), True
+        if (not self.tableExists(newTable, con=con)):
+            if (self.tableExists(originalTable, con=con)):
+                with con:
+                    cur = con.cursor()
+                    cur.execute("SELECT sql FROM sqlite_master WHERE type='table'\
+                                 AND name='{ot}'".format(ot=originalTable))
+                    statement = cur.fetchone()[0]
+                    command = statement.replace(originalTable, newTable, 1)
+                    cur.execute(command)
+                    if copyContents:
+                        cur.execute("INSERT INTO {nt} SELECT * FROM {ot}"\
+                                    .format(nt=newTable, ot=originalTable))
+                if conCreated: 
+                    try: 
+                        con.close()
+                    except: 
+                        pass
+            elif notFoundError:
+                raise IOError("Original table does not exist!")
+        elif foundError:
+            raise IOError("New table already exists!")
 
     def updateRow(self, data, table, id_col, ID, con=None):
         """Updates a single row in a table 
@@ -215,7 +292,11 @@ class Updater(object):
                 if "'" in value: value = value.replace("'", "")
                 cur.execute("UPDATE {tn} SET {cn} = ('{value}') WHERE {idc} = ({ID})"\
                             .format(tn=table, cn=item, value=value, idc=id_col, ID=ID))
-        if conCreated: con.close()
+        if conCreated: 
+            try: 
+                con.close()
+            except: 
+                pass
 
     def rowAsDict(self, rowData, colData):
         result = dict()
@@ -264,7 +345,11 @@ class Updater(object):
                 if (monitor != 0 and ID%monitor == 0):
                     print "Updating index", ID, "of table", table, "using", str(fun)
                 self.updateRow(data, table, id_col, ID, con=con)
-            if conCreated: con.close()
+            if conCreated: 
+                try: 
+                    con.close()
+                except: 
+                    pass
 
     def getRows(self, table, column, col_value, id_col="_id", con=None):
         """Gets rows matching certain criteria
