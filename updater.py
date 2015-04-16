@@ -410,9 +410,9 @@ class Updater(object):
                     for value in requirement:
                         if (not firstIteration):
                             statement += " OR "
-                        statement += str(item) + " = " + str(value)
+                        statement += str(item) + " = '" + str(value) + "'"
                 else:
-                    statement += str(item) + " = " + str(requirement)
+                    statement += str(item) + " = '" + str(requirement) + "'"
         with con:
             cur = con.cursor()
             cur.execute(statement)

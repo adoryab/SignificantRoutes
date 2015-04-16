@@ -65,7 +65,7 @@ def combineCols(item, newCol=None, reorder=False, *cols):
     for col in cols:
         if col not in item or item[col] is None:
             return result
-        newValue += str(item[col])
+        newValue.append(str(item[col]))
     if reorder:
         newValue.sort()
     newValue = ",".join(newValue)
@@ -287,7 +287,7 @@ def update(): # script to run here (FULL PIPELINE)
     updater.updateTable(table="places", id_col="_id", fun=combineColsGenerator("names_all", True, "name_1", "name_2", "name_3", 
                                                                                "name_4", "name_5"), monitor=5, con=con)
 
-    updater.updateTable(table="GeoNames", id_col="_id", fun=getTransitionGenerator("locations.db", "GeoNames", "streets_intersection"), 
+    updater.updateTable(table="GeoNames", id_col="_id", fun=getTransitionGenerator("locations.db", "GeoNames", "streets_intersections"), 
                         monitor=5, con=con)
     updater.updateTable(table="GeoNames", id_col="_id", fun=getTransitionGenerator("locations.db", "GeoNames", "toponymName_places"),
                         monitor=5, con=con)
@@ -301,7 +301,7 @@ def update(): # script to run here (FULL PIPELINE)
                         monitor=5, con=con)
     
     updater.updateTable(table="GeoNames", id_col="_id", 
-                        fun=combineColsGenerator("streets_transition", False, "streets_intersection", "streets_intersection_next"), 
+                        fun=combineColsGenerator("streets_transition", False, "streets_intersections", "streets_intersections_next"), 
                         monitor=5, con=con)
     updater.updateTable(table="GeoNames", id_col="_id",
                         fun=combineColsGenerator("toponym_transition", False, "toponymName_places", "toponymName_places_next"), 
@@ -328,24 +328,24 @@ def update(): # script to run here (FULL PIPELINE)
     user_IDs = updater.getDistinctValues(table=coreTable, column=uid_col)
 
     for uid in user_IDs:
-        addInformation(table="GeoNames", newTable="locations_intersections", P1_name="streets_intersection", 
-                       P2_name="streets_intersection_next", transition_name="streets_transition", uid_col=uid_col, 
-                       uid=uid, updater=updater, con=col)
+        addInformation(table="GeoNames", newTable="locations_intersections", P1_name="streets_intersections", 
+                       P2_name="streets_intersections_next", transition_name="streets_transition", uid_col=uid_col, 
+                       uid=uid, updater=updater, con=con)
         addInformation(table="GeoNames", newTable="locations_areas", P1_name="toponymName_places", 
                        P2_name="toponymName_places_next", transition_name="toponym_transition", uid_col=uid_col, 
-                       uid=uid, updater=updater, con=col)
+                       uid=uid, updater=updater, con=con)
         addInformation(table="places", newTable="locations_places", P1_name="name_1", 
                        P2_name="name_1_next", transition_name="name_1_transition", uid_col=uid_col, 
-                       uid=uid, updater=updater, con=col)
+                       uid=uid, updater=updater, con=con)
         addInformation(table="geocoding", newTable="locations_street", P1_name="street", 
                        P2_name="street_next", transition_name="street_transition", uid_col=uid_col, 
-                       uid=uid, updater=updater, con=col)
+                       uid=uid, updater=updater, con=con)
         addInformation(table="geocoding", newTable="locations_establishment", P1_name="establishment", 
                        P2_name="establishment_next", transition_name="establishment_transition", uid_col=uid_col, 
-                       uid=uid, updater=updater, con=col)
+                       uid=uid, updater=updater, con=con)
         addInformation(table="geocoding", newTable="locations_station", P1_name="bus_station", 
                        P2_name="bus_station_next", transition_name="bus_station_transition", uid_col=uid_col, 
-                       uid=uid, updater=updater, con=col)
+                       uid=uid, updater=updater, con=con)
 
         con.close()
 
