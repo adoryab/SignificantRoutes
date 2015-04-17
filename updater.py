@@ -436,8 +436,9 @@ class Updater(object):
             con, conCreated = self.getConnection(), True
         if (not self.tableExists(table, con=con)):
             raise IOError("Invalid table!")
-        if (not self.columnExists(table, column, con=con)): 
-            raise IOError("Invalid column!")
+        for column in columns:
+            if (not self.columnExists(table, column, con=con)): 
+                raise IOError("Invalid column!")
         id_index = self.getIndex(table, id_col, con=con)
         statement = "SELECT * FROM " + str(table)
         if len(columns) > 0:
@@ -500,7 +501,10 @@ class Updater(object):
             raise IOError("Invalid column!")
         id_index = self.getIndex(table, id_col, con=con)
         cur = con.cursor()
-        cur.execute("SELECT * FROM {tn} WHERE {cn} = {cv}".format(tn=table, cn=col1, cv=value))
+        if value is None:
+            cur.execute("SELECT * FROM {tn} WHERE {cn} IS NULL".format(tn=table, cn=col1))
+        else:
+            cur.execute("SELECT * FROM {tn} WHERE {cn} = '{cv}'".format(tn=table, cn=col1, cv=value))
         item = cur.fetchone()
         columns = self.getColumnsForRow(table, id_col, item[id_index])
         item = self.rowAsDict(item, columns)
@@ -521,14 +525,25 @@ class Updater(object):
         con: pre-existing sqlite connection"""
 
         conCreated = False
+        print "data", data
         if (con is None): 
             con, conCreated = self.getConnection(), True
+        colList = [str(item) for item in data]
+        print "colList", colList
+        colString = "'" + "','".join(colList) + "'"
+        valueList = [str(data[item]) for item in data]
+        print "valueList", valueList
+        for i in xrange(len(valueList)):
+            value = valueList[i]
+            if "'" in value:
+                valueList[i] = value.replace("'", "")
+        valueString = "'" + "','".join(valueList) + "'"
         for item in data:
             self.createColumn(table, item, con=con)
-            with con:
-                cur = con.cursor()
-                value = str(data[item])
-                if "'" in value: value = value.replace("'", "")
-                cur.execute("INSERT INTO {tn}({cn}) VALUE('{value}')"\
-                            .format(tn=table, cn=item, value=value))
+        with con:
+            cur = con.cursor()
+            print "INSERT INTO {tn} ('{cs}') VALUES ('{vs}')"\
+                  .format(tn=table, cs=colString, vs=valueString)
+            cur.execute("INSERT INTO {tn} ('{cs}') VALUES ('{vs}')"\
+                        .format(tn=table, cs=colString, vs=valueString))
         if conCreated: con.close()
