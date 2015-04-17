@@ -458,6 +458,7 @@ class Updater(object):
             else:
                 statement += str(column) + " = '" + str(content) + "'"
             firstSet = False
+        print "statement", statement
         with con:
             cur = con.cursor()
             cur.execute(statement)
@@ -530,14 +531,14 @@ class Updater(object):
             con, conCreated = self.getConnection(), True
         colList = [str(item) for item in data]
         print "colList", colList
-        colString = "'" + "','".join(colList) + "'"
+        colString = "','".join(colList)
         valueList = [str(data[item]) for item in data]
         print "valueList", valueList
         for i in xrange(len(valueList)):
             value = valueList[i]
             if "'" in value:
                 valueList[i] = value.replace("'", "")
-        valueString = "'" + "','".join(valueList) + "'"
+        valueString = "','".join(valueList)
         for item in data:
             self.createColumn(table, item, con=con)
         with con:
