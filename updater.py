@@ -449,19 +449,21 @@ class Updater(object):
                 statement += " AND "
             content = columns[column]
             if (type(content) == list):
+                statement += "("
                 firstIteration = True
                 for item in content:
-                    if (firstIteration):
-                        firstIteration = False
                     if (not firstIteration):
                         statement += " OR "
                     if item is None:
-                        statement += str(column) + " IS NONE"
+                        statement += str(column) + " IS NULL"
                     else:
                         statement += str(column) + " = '" + str(item) + "'"
+                    if (firstIteration):
+                        firstIteration = False
+                statement += ")"
             else:
                 if content is None:
-                    statement += str(column) + " IS NONE"
+                    statement += str(column) + " IS NULL"
                 else:
                     statement += str(column) + " = '" + str(content) + "'"
             firstSet = False
@@ -547,6 +549,7 @@ class Updater(object):
                 valueList[i] = value.replace("'", "")
         valueString = "','".join(valueList)
         for item in data:
+            # Doesn't create column if it already exists
             self.createColumn(table, item, con=con)
         with con:
             cur = con.cursor()

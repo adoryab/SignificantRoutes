@@ -76,11 +76,11 @@ def combineCols(item, newCol=None, reorder=False, *cols):
 def getDataFromService(item, service):
     return service.getData(item)
 
-def addPlaceInformation(table, uid, newTable, P1_name, place_category, updater, con=None):
+def addPlaceInformation(table, uid, newTable, P1_name, distinct_places, updater, con=None):
     conCreated = False
     if (con is None):
         con, conCreated = updater.getConnection(), True
-    for item in place_category:
+    for item in distinct_places:
         data = dict()
         data['uid'] = uid
         data['P1'] = item
@@ -94,11 +94,11 @@ def addPlaceInformation(table, uid, newTable, P1_name, place_category, updater, 
     if conCreated: con.close()
 
 def addTransitionInformation(table, uid, newTable, P1_name, P2_name, 
-                             transition_name, transition_category, updater, con=None):
+                             transition_name, distinct_transitions, updater, con=None):
     conCreated = False
     if (con is None):
         con, conCreated = updater.getConnection(), True
-    for item in transition_category:
+    for item in distinct_transitions:
         data = dict()
         data['uid'] = uid
         data['P1'] = updater.getAssociatedValue(table=table, col1=transition_name,
@@ -120,12 +120,17 @@ def addInformation(table, newTable, P1_name, P2_name, transition_name, uid_col, 
     conCreated = False
     if (con is None):
         con, conCreated = updater.getConnection(), True
-    place_category = updater.getDistinctValues(table=table, column=P1_name, conditions={uid_col:uid})
-    transition_category = updater.getDistinctValues(table=table, column=transition_name, conditions={uid_col:uid})
+    print "newTable is", newTable
+    print "Getting place category!"
+    distinct_places = updater.getDistinctValues(table=table, column=P1_name, conditions={uid_col:uid})
+    print "Getting transition category!"
+    distinct_transitions = updater.getDistinctValues(table=table, column=transition_name, conditions={uid_col:uid})
+    print "Adding place information!"
     addPlaceInformation(table=table, uid=uid, newTable=newTable, P1_name=P1_name, 
-                        place_category=place_category, updater=updater, con=con)
+                        distinct_places=distinct_places, updater=updater, con=con)
+    print "Adding transition information!"
     addTransitionInformation(table=table, uid=uid, newTable=newTable, P1_name=P1_name, P2_name=P2_name,
-                             transition_name=transition_name, transition_category=transition_category,
+                             transition_name=transition_name, distinct_transitions=distinct_transitions,
                              updater=updater, con=con)
     if conCreated: con.close()
 
@@ -213,7 +218,7 @@ def update(): # script to run here (FULL PIPELINE)
     updater = Updater("locations.db")
     con = updater.getConnection()
 
-    tables = ["locations", "GeoNames", "places", "geocoding"]
+    """tables = ["locations", "GeoNames", "places", "geocoding"]
     for table in tables:
         updater.updateTable(table=table, id_col="_id", fun=convertTimestamp, monitor=5, con=con)
 
@@ -322,7 +327,7 @@ def update(): # script to run here (FULL PIPELINE)
     tables = ["locations_intersections", "locations_areas", "locations_places", "locations_street",
               "locations_establishment", "locations_station"]
     for table in tables:
-        updater.createTable(table=table, con=con)
+        updater.createTable(table=table, con=con)"""
 
     uid_col, coreTable = "device_id", "locations"
     user_IDs = updater.getDistinctValues(table=coreTable, column=uid_col)
