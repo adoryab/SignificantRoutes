@@ -451,12 +451,19 @@ class Updater(object):
             if (type(content) == list):
                 firstIteration = True
                 for item in content:
+                    if (firstIteration):
+                        firstIteration = False
                     if (not firstIteration):
                         statement += " OR "
-                    statement += str(column) + " = '" + str(item) + "'"
-                    firstIteration = False
+                    if item is None:
+                        statement += str(column) + " IS NONE"
+                    else:
+                        statement += str(column) + " = '" + str(item) + "'"
             else:
-                statement += str(column) + " = '" + str(content) + "'"
+                if content is None:
+                    statement += str(column) + " IS NONE"
+                else:
+                    statement += str(column) + " = '" + str(content) + "'"
             firstSet = False
         print "statement", statement
         with con:
