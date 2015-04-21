@@ -5,6 +5,8 @@
 # @TODO:
 # ADD COMMAND LINE INTERFACE
 
+# BREAK PIPELINE INTO FUNCTIONS
+
 import sys
 from services import Service
 from updater import Updater
@@ -102,13 +104,13 @@ def addTransitionInformation(table, uid, newTable, P1_name, P2_name,
         data = dict()
         data['uid'] = uid
         data['P1'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                               value=item, col2=P1_name, con=con)
-        data['P1_label'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                                     value=(data['P1']), col2="label", con=con)
+                                                value=item, col2=P1_name, con=con)
+        data['P1_label'] = updater.getAssociatedValue(table=table, col1=P1_name,
+                                                      value=(data['P1']), col2="label", con=con)
         data['P2'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                               value=item, col2=P2_name, con=con)
-        data['P2_label'] = updater.getAssociatedValue(table=table, col1=transition_name,
-                                                     value=(data['P2']), col2="label", con=con)
+                                                value=item, col2=P2_name, con=con)
+        data['P2_label'] = updater.getAssociatedValue(table=table, col1=P2_name,
+                                                      value=(data['P2']), col2="label", con=con)
         data['frequency'] = updater.getFrequency(table=table, columns={transition_name:item}, con=con)
         for i in xrange(0, 24, 2):
             category = str(i) + '-' + str(i+1)
@@ -128,7 +130,6 @@ def addInformation(table, newTable, P1_name, P2_name, transition_name, uid_col, 
     print "Adding place information!"
     addPlaceInformation(table=table, uid=uid, newTable=newTable, P1_name=P1_name, 
                         distinct_places=distinct_places, updater=updater, con=con)
-    print "Adding transition information!"
     addTransitionInformation(table=table, uid=uid, newTable=newTable, P1_name=P1_name, P2_name=P2_name,
                              transition_name=transition_name, distinct_transitions=distinct_transitions,
                              updater=updater, con=con)
@@ -313,11 +314,11 @@ def update(): # script to run here (FULL PIPELINE)
                         monitor=5, con=con)
     updater.updateTable(table="places", id_col="_id",
                         fun=combineColsGenerator("name_1_transition", False, "name_1", "name_1_next"), 
-                        monitor=5, con=con)
+                        monitor=5, con=con)"""
     updater.updateTable(table="geocoding", id_col="_id", 
                         fun=combineColsGenerator("street_transition", False, "street", "street_next"),
                         monitor=5, con=con)
-    updater.updateTable(table="geocoding", id_col="_id", 
+    """updater.updateTable(table="geocoding", id_col="_id", 
                         fun=combineColsGenerator("establishment_transition", False, "establishment", "establishment_next"), 
                         monitor=5, con=con)
     updater.updateTable(table="geocoding", id_col="_id", 
@@ -333,7 +334,7 @@ def update(): # script to run here (FULL PIPELINE)
     user_IDs = updater.getDistinctValues(table=coreTable, column=uid_col)
 
     for uid in user_IDs:
-        addInformation(table="GeoNames", newTable="locations_intersections", P1_name="streets_intersections", 
+        """addInformation(table="GeoNames", newTable="locations_intersections", P1_name="streets_intersections", 
                        P2_name="streets_intersections_next", transition_name="streets_transition", uid_col=uid_col, 
                        uid=uid, updater=updater, con=con)
         addInformation(table="GeoNames", newTable="locations_areas", P1_name="toponymName_places", 
@@ -341,7 +342,7 @@ def update(): # script to run here (FULL PIPELINE)
                        uid=uid, updater=updater, con=con)
         addInformation(table="places", newTable="locations_places", P1_name="name_1", 
                        P2_name="name_1_next", transition_name="name_1_transition", uid_col=uid_col, 
-                       uid=uid, updater=updater, con=con)
+                       uid=uid, updater=updater, con=con)"""
         addInformation(table="geocoding", newTable="locations_street", P1_name="street", 
                        P2_name="street_next", transition_name="street_transition", uid_col=uid_col, 
                        uid=uid, updater=updater, con=con)

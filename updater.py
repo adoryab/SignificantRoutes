@@ -299,6 +299,7 @@ class Updater(object):
                 pass
 
     def rowAsDict(self, rowData, colData):
+        rowData = [row for row in rowData if row is not None]
         result = dict()
         for i in xrange(len(colData)):
             col = colData[i]
@@ -488,7 +489,7 @@ class Updater(object):
 
         return len(self.getIntersectingValues(table, columns, id_col, con))
 
-    def getAssociatedValue(self, table, col1, value, col2, id_col="_id", con=None):
+    def getAssociatedValue(self, table, col1, value, col2, id_col="_id", con=None, error=False):
         """Gets value from col2 associated with value from col1
 
         PARAMETERS
@@ -500,7 +501,8 @@ class Updater(object):
         OPTIONAL
         id_col: id column in table (default _id)
         id_index: location of id column (default 0)
-        con: pre-existing sqlite connection"""
+        con: pre-existing sqlite connection
+        error: if true, raises error if no associated column exists"""
 
         conCreated = False
         if (con is None):
@@ -511,18 +513,25 @@ class Updater(object):
             raise IOError("Invalid column!")
         id_index = self.getIndex(table, id_col, con=con)
         cur = con.cursor()
+        print "table", table, "column", col1, "value", value
         if value is None:
+            print "SELECT * FROM {tn} WHERE {cn} IS NULL".format(tn=table, cn=col1)
             cur.execute("SELECT * FROM {tn} WHERE {cn} IS NULL".format(tn=table, cn=col1))
         else:
             cur.execute("SELECT * FROM {tn} WHERE {cn} = '{cv}'".format(tn=table, cn=col1, cv=value))
         item = cur.fetchone()
+        print "item", item
+        if item is None: return None
         columns = self.getColumnsForRow(table, id_col, item[id_index])
         item = self.rowAsDict(item, columns)
         if conCreated: con.close()
+        print "item", item
         if col2 in item:
             return item[col2]
-        else:
+        elif error:
             raise IOError("Associated column does not exist for this row!")
+        else:
+            return None
 
     def addRow(self, table, data, con=None):
         """Adds a row to an existing table
