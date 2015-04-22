@@ -7,6 +7,9 @@
 
 # BREAK PIPELINE INTO FUNCTIONS
 
+# ADD HANDLING OF NULL/NONE VALUES 
+# WITHOUT CREATING NULL/NONE CONFUSION
+
 import sys
 from services import Service
 from updater import Updater
@@ -288,7 +291,7 @@ def update(): # script to run here (FULL PIPELINE)
     # ADD DISTANCE TO EACH PLACE IN "places"
     numPlaces = 5
     for i in xrange(1, numPlaces+1):
-        updater.updateTable(table="places", id_col="_id", fun=haversineGenerator(i), monitor=5, con=con)
+        updater.updateTable(table="places", id_col="_id", fun=haversineGenerator(i), monitor=5, con=con)"""
 
     updater.updateTable(table="places", id_col="_id", fun=combineColsGenerator("names_all", True, "name_1", "name_2", "name_3", 
                                                                                "name_4", "name_5"), monitor=5, con=con)
@@ -299,11 +302,15 @@ def update(): # script to run here (FULL PIPELINE)
                         monitor=5, con=con)
     updater.updateTable(table="places", id_col="_id", fun=getTransitionGenerator("locations.db", "places", "name_1"),
                         monitor=5, con=con)
+    updater.updateTable(table="places", id_col="_id", fun=getTransitionGenerator("locations.db", "places", "names_all"),
+                        monitor=5, con=con)
     updater.updateTable(table="geocoding", id_col="_id", fun=getTransitionGenerator("locations.db", "geocoding", "street"), 
                         monitor=5, con=con)
     updater.updateTable(table="geocoding", id_col="_id", fun=getTransitionGenerator("locations.db", "geocoding", "establishment"), 
                         monitor=5, con=con)
     updater.updateTable(table="geocoding", id_col="_id", fun=getTransitionGenerator("locations.db", "geocoding", "bus_station"), 
+                        monitor=5, con=con)
+    updater.updateTable(table="geocoding", id_col="_id", fun=getTransitionGenerator("locations.db", "geocoding", "neighborhood"), 
                         monitor=5, con=con)
     
     updater.updateTable(table="GeoNames", id_col="_id", 
@@ -314,27 +321,33 @@ def update(): # script to run here (FULL PIPELINE)
                         monitor=5, con=con)
     updater.updateTable(table="places", id_col="_id",
                         fun=combineColsGenerator("name_1_transition", False, "name_1", "name_1_next"), 
-                        monitor=5, con=con)"""
+                        monitor=5, con=con)
+    updater.updateTable(table="places", id_col="_id",
+                        fun=combineColsGenerator("names_all_transition", False, "names_all", "names_all_next"), 
+                        monitor=5, con=con)
     updater.updateTable(table="geocoding", id_col="_id", 
                         fun=combineColsGenerator("street_transition", False, "street", "street_next"),
                         monitor=5, con=con)
-    """updater.updateTable(table="geocoding", id_col="_id", 
+    updater.updateTable(table="geocoding", id_col="_id", 
                         fun=combineColsGenerator("establishment_transition", False, "establishment", "establishment_next"), 
                         monitor=5, con=con)
     updater.updateTable(table="geocoding", id_col="_id", 
                         fun=combineColsGenerator("bus_station_transition", False, "bus_station", "bus_station_next"), 
                         monitor=5, con=con)
+    updater.updateTable(table="geocoding", id_col="_id", 
+                        fun=combineColsGenerator("neighborhood_transition", False, "neighborhood", "neighborhood_next"),
+                        monitor=5, con=con)
     
-    tables = ["locations_intersections", "locations_areas", "locations_places", "locations_street",
-              "locations_establishment", "locations_station"]
+    tables = ["locations_intersections", "locations_areas", "locations_places",  "locations_allplaces","locations_street",
+              "locations_establishment", "locations_station", "locations_neighborhood"]
     for table in tables:
-        updater.createTable(table=table, con=con)"""
+        updater.createTable(table=table, con=con)
 
     uid_col, coreTable = "device_id", "locations"
     user_IDs = updater.getDistinctValues(table=coreTable, column=uid_col)
 
     for uid in user_IDs:
-        """addInformation(table="GeoNames", newTable="locations_intersections", P1_name="streets_intersections", 
+        addInformation(table="GeoNames", newTable="locations_intersections", P1_name="streets_intersections", 
                        P2_name="streets_intersections_next", transition_name="streets_transition", uid_col=uid_col, 
                        uid=uid, updater=updater, con=con)
         addInformation(table="GeoNames", newTable="locations_areas", P1_name="toponymName_places", 
@@ -342,7 +355,10 @@ def update(): # script to run here (FULL PIPELINE)
                        uid=uid, updater=updater, con=con)
         addInformation(table="places", newTable="locations_places", P1_name="name_1", 
                        P2_name="name_1_next", transition_name="name_1_transition", uid_col=uid_col, 
-                       uid=uid, updater=updater, con=con)"""
+                       uid=uid, updater=updater, con=con)
+        addInformation(table="places", newTable="locations_allplaces", P1_name="names_all", 
+                       P2_name="names_all_next", transition_name="names_all_transition", uid_col=uid_col, 
+                       uid=uid, updater=updater, con=con)
         addInformation(table="geocoding", newTable="locations_street", P1_name="street", 
                        P2_name="street_next", transition_name="street_transition", uid_col=uid_col, 
                        uid=uid, updater=updater, con=con)
@@ -352,8 +368,10 @@ def update(): # script to run here (FULL PIPELINE)
         addInformation(table="geocoding", newTable="locations_station", P1_name="bus_station", 
                        P2_name="bus_station_next", transition_name="bus_station_transition", uid_col=uid_col, 
                        uid=uid, updater=updater, con=con)
-
-        con.close()
+        addInformation(table="geocoding", newTable="locations_neighborhood", P1_name="neighborhood",
+                       P2_name="neighborhood_next", transition_name="neighborhood_transition", uid_col=uid_col, 
+                       uid=uid, updater=updater, con=con)
+    con.close()
 
 # COMMAND LINE INTERFACE
 
